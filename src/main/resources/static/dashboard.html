@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="A0 Platform — Manage your media, API keys, subscriptions, and profile from one unified dashboard." />
+    <title>A0 Platform</title>
+    <link rel="stylesheet" href="/a0-ui.css" />
+</head>
+<body>
+<div class="toast-container" id="toasts"></div>
+<div class="sidebar-overlay"></div>
+
+<!-- Mobile Header -->
+<div class="mobile-header">
+    <span style="font-weight:700;font-size:18px;">A0</span>
+    <button class="burger" id="burgerBtn">☰</button>
+</div>
+
+<!-- Sidebar -->
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <h1>A0</h1>
+        <p>Media Platform</p>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')">
+                <span class="nav-icon">◉</span> Dashboard
+            </a>
+            <a class="nav-item" id="nav-auth" onclick="navigate('auth')">
+                <span class="nav-icon">🔐</span> Authentication
+            </a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Media</div>
+            <a class="nav-item" id="nav-videos" onclick="navigate('videos')">
+                <span class="nav-icon">🎬</span> Videos
+            </a>
+            <a class="nav-item" id="nav-photos" onclick="navigate('photos')">
+                <span class="nav-icon">📷</span> Photos
+            </a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Account</div>
+            <a class="nav-item" id="nav-apikeys" onclick="navigate('apikeys')">
+                <span class="nav-icon">🔑</span> API Keys
+            </a>
+            <a class="nav-item" id="nav-plans" onclick="navigate('plans')">
+                <span class="nav-icon">📋</span> Plans
+            </a>
+            <a class="nav-item" id="nav-subscription" onclick="navigate('subscription')">
+                <span class="nav-icon">⭐</span> Subscription
+            </a>
+        </div>
+        <div class="nav-section">
+            <div class="nav-section-title">Developer</div>
+            <a class="nav-item" id="nav-graphql" onclick="navigate('graphql')">
+                <span class="nav-icon">⚡</span> GraphQL
+            </a>
+            <a class="nav-item" href="/graphiql" style="text-decoration:none">
+                <span class="nav-icon">🧪</span> GraphiQL IDE
+            </a>
+        </div>
+    </nav>
+    <div class="sidebar-footer">
+        <div style="font-weight:600;font-size:13px;" id="sidebarUser">Not logged in</div>
+        <div style="font-size:11px;margin-top:2px;" id="sidebarRole"></div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="app-layout">
+<div class="main-content">
+
+<!-- ═══ DASHBOARD PAGE ═══ -->
+<div class="page active" id="page-dashboard">
+    <div class="page-header">
+        <h2>Dashboard</h2>
+        <p>Overview of your account, subscription, and usage.</p>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:18px;">
+        <div class="stat-card">
+            <div class="stat-icon blue">👤</div>
+            <div><div class="stat-label">Username</div><div class="stat-value" id="profName">-</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">⭐</div>
+            <div><div class="stat-label">Subscription</div><div class="stat-value" id="subStatus">-</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow">📋</div>
+            <div><div class="stat-label">Plan</div><div class="stat-value" id="planName">-</div></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">🔑</div>
+            <div><div class="stat-label">Role</div><div class="stat-value" id="profRole">-</div></div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><h3>Profile</h3></div>
+            <div class="kv-grid">
+                <div class="kv-item"><div class="kv-label">Email</div><div class="kv-value" id="profEmail">-</div></div>
+                <div class="kv-item"><div class="kv-label">User ID</div><div class="kv-value" id="profId">-</div></div>
+            </div>
+            <div style="margin-top:14px;">
+                <button class="btn-primary" onclick="loadProfile()">↻ Refresh Profile</button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>Subscription</h3></div>
+            <div class="kv-grid">
+                <div class="kv-item"><div class="kv-label">Plan Name</div><div class="kv-value" id="subPlan">-</div></div>
+                <div class="kv-item"><div class="kv-label">Price</div><div class="kv-value" id="planPrice">-</div></div>
+                <div class="kv-item"><div class="kv-label">Start Date</div><div class="kv-value" id="subStart">-</div></div>
+                <div class="kv-item"><div class="kv-label">End Date</div><div class="kv-value" id="subEnd">-</div></div>
+                <div class="kv-item"><div class="kv-label">Rate Limit</div><div class="kv-value" id="planRate">-</div></div>
+                <div class="kv-item"><div class="kv-label">Media Count</div><div class="kv-value" id="planMedia">-</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:18px;">
+        <div class="card-header"><h3>Quick Settings</h3></div>
+        <div class="form-row">
+            <div class="form-group" style="flex:2">
+                <label for="jwtToken">JWT Token</label>
+                <input id="jwtToken" placeholder="Token will appear here after login" />
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="apiKey">API Key</label>
+                <input id="apiKey" placeholder="apikey" value="key" />
+            </div>
+        </div>
+        <div class="btn-row">
+            <button onclick="ls(SK.jwt, $('jwtToken').value.trim()); toast('JWT saved','success')">Save JWT</button>
+            <button onclick="doLogout()" class="btn-danger">Logout / Clear</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ AUTH PAGE ═══ -->
+<div class="page" id="page-auth">
+    <div class="page-header">
+        <h2>Authentication</h2>
+        <p>Login or create a new account.</p>
+    </div>
+    <div class="card" style="max-width:520px;">
+        <div class="auth-tabs">
+            <div class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Login</div>
+            <div class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Register</div>
+        </div>
+
+        <div id="loginForm">
+            <div class="form-group">
+                <label for="loginUsername">Username</label>
+                <input id="loginUsername" placeholder="Enter your username" />
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input id="loginPassword" type="password" placeholder="Enter your password" />
+            </div>
+            <button class="btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()">Sign In</button>
+        </div>
+
+        <div id="registerForm" style="display:none;">
+            <div class="form-group">
+                <label for="regUsername">Username</label>
+                <input id="regUsername" placeholder="Choose a username (3-20 chars)" />
+            </div>
+            <div class="form-group">
+                <label for="regEmail">Email</label>
+                <input id="regEmail" type="email" placeholder="you@example.com" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="regPassword">Password</label>
+                    <input id="regPassword" type="password" placeholder="Min 8 characters" />
+                </div>
+                <div class="form-group">
+                    <label for="regPasswordConfirm">Confirm</label>
+                    <input id="regPasswordConfirm" type="password" placeholder="Confirm password" />
+                </div>
+            </div>
+            <button class="btn-primary" style="width:100%;margin-top:4px" onclick="doRegister()">Create Account</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ VIDEOS PAGE ═══ -->
+<div class="page" id="page-videos">
+    <div class="page-header">
+        <h2>Video Manager</h2>
+        <p>Upload, stream, and manage your video library.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><h3>Upload & Controls</h3></div>
+        <div class="form-row">
+            <div class="form-group" style="flex:2">
+                <label>Video File</label>
+                <input type="file" id="videoFileInput" accept="video/*" />
+            </div>
+            <div class="form-group" style="flex:1">
+                <label for="videoIdInput">Video ID</label>
+                <input id="videoIdInput" placeholder="Enter video ID to play" />
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn-primary" onclick="uploadVideo()">⬆ Upload</button>
+            <button onclick="playVideo($('videoIdInput').value.trim())">▶ Load & Play</button>
+            <button onclick="fetchMyVideos()">↻ Refresh</button>
+        </div>
+    </div>
+
+    <div class="quality-bar" id="qualities"></div>
+
+    <div class="media-frame" style="margin-bottom:18px;">
+        <video id="player" controls preload="metadata"></video>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3>My Videos</h3></div>
+        <div class="list-panel" id="videoList">
+            <div class="empty-state"><div class="empty-icon">🎬</div>No videos yet</div>
+        </div>
+    </div>
+
+    <div class="log-panel" id="videoLog" style="margin-top:18px;"></div>
+</div>
+
+<!-- ═══ PHOTOS PAGE ═══ -->
+<div class="page" id="page-photos">
+    <div class="page-header">
+        <h2>Photo Manager</h2>
+        <p>Upload, preview, and manage your photos.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><h3>Upload</h3></div>
+        <div class="form-row">
+            <div class="form-group" style="flex:1">
+                <label>Photo File</label>
+                <input type="file" id="photoFileInput" accept="image/*" />
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="btn-primary" onclick="uploadPhoto()">⬆ Upload Photo</button>
+            <button onclick="fetchMyPhotos()">↻ Refresh</button>
+        </div>
+    </div>
+
+    <div class="media-frame" style="margin-bottom:18px;">
+        <img id="photoPreview" alt="Photo preview" style="display:none;" />
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3>My Photos</h3></div>
+        <div class="list-panel" id="photoList">
+            <div class="empty-state"><div class="empty-icon">📷</div>No photos yet</div>
+        </div>
+    </div>
+
+    <div class="log-panel" id="photoLog" style="margin-top:18px;"></div>
+</div>
+
+<!-- ═══ API KEYS PAGE ═══ -->
+<div class="page" id="page-apikeys">
+    <div class="page-header">
+        <h2>API Keys</h2>
+        <p>Create and manage your API access keys.</p>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><h3>Create New Key</h3></div>
+        <div class="form-row">
+            <div class="form-group" style="flex:1">
+                <label for="newKeyName">Key Name</label>
+                <input id="newKeyName" placeholder="e.g. production-key" />
+            </div>
+        </div>
+        <button class="btn-primary" onclick="createApiKey()">+ Create Key</button>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3>Your Keys</h3><button class="btn-ghost" onclick="fetchApiKeys()">↻</button></div>
+        <div class="list-panel" id="apiKeyList">
+            <div class="empty-state"><div class="empty-icon">🔑</div>No API keys yet</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ PLANS PAGE ═══ -->
+<div class="page" id="page-plans">
+    <div class="page-header">
+        <h2>Available Plans</h2>
+        <p>Browse all subscription plans and their features.</p>
+    </div>
+    <div class="btn-row" style="margin-bottom:18px;">
+        <button class="btn-primary" onclick="fetchPlans()">↻ Load Plans</button>
+    </div>
+    <div class="grid-3" id="plansList">
+        <div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">📋</div>Click "Load Plans" to view available plans</div>
+    </div>
+</div>
+
+<!-- ═══ SUBSCRIPTION PAGE ═══ -->
+<div class="page" id="page-subscription">
+    <div class="page-header">
+        <h2>Subscription</h2>
+        <p>View your current subscription or subscribe to a plan.</p>
+    </div>
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><h3>Current Subscription</h3></div>
+            <div class="kv-grid">
+                <div class="kv-item"><div class="kv-label">Status</div><div class="kv-value" id="subStatusPage">-</div></div>
+                <div class="kv-item"><div class="kv-label">Plan</div><div class="kv-value" id="subPlanPage">-</div></div>
+                <div class="kv-item"><div class="kv-label">Start</div><div class="kv-value" id="subStartPage">-</div></div>
+                <div class="kv-item"><div class="kv-label">End</div><div class="kv-value" id="subEndPage">-</div></div>
+            </div>
+            <button style="margin-top:12px" onclick="fetchCurrentSub()">↻ Refresh</button>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3>Subscribe to Plan</h3></div>
+            <div class="form-group">
+                <label for="subPlanInput">Plan Name</label>
+                <input id="subPlanInput" placeholder="e.g. PRO, BASIC" />
+            </div>
+            <button class="btn-primary" onclick="subscribeToPlan()">Subscribe</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ GRAPHQL PAGE ═══ -->
+<div class="page" id="page-graphql">
+    <div class="page-header">
+        <h2>GraphQL Explorer</h2>
+        <p>Run GraphQL queries against the A0 API.</p>
+    </div>
+    <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><h3>Query</h3></div>
+        <div class="form-row">
+            <div class="form-group" style="flex:1">
+                <label for="gqlUserId">User ID</label>
+                <input id="gqlUserId" placeholder="User ID for getUser query" />
+            </div>
+        </div>
+        <button class="btn-primary" onclick="runGraphQL()">⚡ Run getUser Query</button>
+    </div>
+    <div class="card">
+        <div class="card-header"><h3>Result</h3></div>
+        <pre id="gqlResult" style="min-height:200px;max-height:500px;overflow:auto;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:12px;font-family:'SF Mono','Cascadia Code','Fira Code',monospace;color:var(--text-secondary);white-space:pre-wrap;word-break:break-word;">No query run yet</pre>
+    </div>
+</div>
+
+</div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

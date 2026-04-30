@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: A0
+  profiles:
+    active: kid
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/A0}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:root1234}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  servlet:
+    multipart:
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:10GB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:11GB}
+
+  graphql:
+    graphiql:
+      enabled: ${SPRING_GRAPHQL_GRAPHIQL_ENABLED:true}
+    schema:
+      introspection:
+        enabled: ${SPRING_GRAPHQL_SCHEMA_INTROSPECTION_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:*}
+
+server:
+  address: ${SERVER_ADDRESS:0.0.0.0}
+
+video:
+  Path: ${VIDEO_PATH:src/main/resources/video/}
+  ffmpeg: ${VIDEO_FFMPEG}
+  ffprobe: ${VIDEO_FFPROBE}
+
+photoPath: ${PHOTO_PATH:src/main/resources/photo/}
+jwt:
+  secretKey: ${JWT_SECRET_KEY:thisisasecretkeytogeneratejsontokenstyjgddy}
+customKey: ${CUSTOM_KEY:key}
+

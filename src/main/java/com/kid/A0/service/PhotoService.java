@@ -1,0 +1,160 @@
+package com.kid.A0.service;
+
+import com.kid.A0.dto.MediaResponse;
+import com.kid.A0.exception.PhotoNotFoundException;
+import com.kid.A0.model.Media;
+import com.kid.A0.model.Plan;
+import com.kid.A0.model.User;
+import com.kid.A0.repo.MediaRepo;
+import com.kid.A0.repo.UserRepo;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.MediaTypeFactory;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+import org.springframework.util.unit.DataSize;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.Principal;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class PhotoService {
+
+    private final MediaRepo mediaRepo;
+    private final UserRepo userRepo;
+
+    @Value("${photoPath}")
+    private String path;
+
+    public PhotoService(MediaRepo mediaRepo, UserRepo userRepo) {
+        this.mediaRepo = mediaRepo;
+        this.userRepo = userRepo;
+    }
+
+    public MediaResponse postPhoto(Long userId, MultipartFile photo) throws IOException {
+        if (photo.isEmpty()) throw new IllegalArgumentException("File Is Empty");
+
+        User user = userRepo.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User not Found"));
+
+        String contentType = photo.getContentType();
+
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File Is Not A Valid Image Format");
+        }
+        handlePhotoSize(user, photo);
+        String extension = ".jpeg";
+        String originalName = photo.getOriginalFilename();
+
+        if (originalName != null && originalName.contains(".")) {
+            extension = originalName.substring(originalName.lastIndexOf(".")).toLowerCase();
+        }
+        String photoId = UUID.randomUUID().toString();
+        String photoName = photoId + extension;
+        if (!Files.exists(Path.of(path))) {
+            Files.createDirectory(Path.of(path));
+        }
+        Path uploadPath = Path.of(path).resolve(photoName);
+
+        Files.copy(photo.getInputStream(), uploadPath, StandardCopyOption.REPLACE_EXISTING);
+
+
+        Media photoResponse = Media.builder()
+                .id(photoId)
+                .filePath(uploadPath.toString())
+                .title(photo.getOriginalFilename())
+                .userId(userId)
+                .type("photo")
+                .isDeleted(false)
+                .build();
+        mediaRepo.save(photoResponse);
+        return new MediaResponse(photoResponse);
+
+    }
+
+    public void deletePhoto(long userId, String photoId) {
+
+        Media photo = mediaRepo.findByIdAndTypeAndIsDeleted(photoId, "photo", false)
+                .orElseThrow(() -> new PhotoNotFoundException("Photo Not Found"));
+
+        if (!photo.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+        photo.setDeleted(true);
+        mediaRepo.save(photo);
+    }
+
+    public void deleteAll() {
+        List<Media> photos = mediaRepo.findMediaByTypeEqualsAndIsDeleted("photo", true);
+        for (Media photo : photos) {
+            try {
+                Path filePath = Path.of(photo.getFilePath());
+                Files.deleteIfExists(filePath);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to Delete Photo: " + photo.getId());
+            }
+        }
+        mediaRepo.deleteAll(photos);
+    }
+
+    public ResponseEntity<Resource> getPhoto(Long userId, String photoId) {
+        if (!userRepo.existsUserById(userId)) {
+            throw new UsernameNotFoundException("User Not Found");
+        }
+        Media photo = mediaRepo.findByIdAndTypeAndIsDeleted(photoId, "photo", false)
+                .orElseThrow(() -> new PhotoNotFoundException("Photo Not Found"));
+        if (!photo.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        try {
+            Path photoPath = Path.of(photo.getFilePath());
+            Resource resource = new UrlResource(photoPath.toUri());
+
+            if (resource.exists()) {
+                return ResponseEntity.ok()
+                        .contentType(MediaTypeFactory.getMediaType(resource)
+                                .orElse(MediaType.IMAGE_JPEG))
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (MalformedURLException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    public List<MediaResponse> getPhotos(Principal principal) {
+        Long userId = Long.valueOf(principal.getName());
+        if (!userRepo.existsUserById(userId)) {
+            throw new UsernameNotFoundException("User Not Found");
+        }
+        List<MediaResponse> responses = mediaRepo
+                .findMediaByUserIdAndTypeAndIsDeleted(userId, "photo", false)
+                .stream()
+                .map(MediaResponse::new)
+                .toList();
+        return responses;
+    }
+
+    private void handlePhotoSize(User user, MultipartFile uploadPhoto) {
+        Plan plan = user.getSubscription().getPlan();
+        DataSize photoSize = DataSize.parse(plan.getPhotoSize());
+        if (uploadPhoto.getSize() > photoSize.toBytes()) {
+            throw new ResponseStatusException(HttpStatus.CONTENT_TOO_LARGE,
+                    String.format("photo size exceeds your %s plan limit of %s",
+                            plan.getName(), plan.getPhotoSize()));
+        }
+    }
+}

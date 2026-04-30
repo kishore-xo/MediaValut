@@ -1,0 +1,134 @@
+## Query ##
+type Query{
+    getUser(id:ID!) :UserResponseGp
+    getMe :UserResponse
+}
+
+
+## output type ##
+
+## Enums
+
+enum Role {
+    ADMIN
+    CUSTOMER
+}
+
+enum SubscribeStatus {
+    ACTIVE,EXPIRED,CANCELLED
+}
+
+enum VideoStage {
+    PROCESSING,
+    COMPLETED
+}
+
+
+##types
+
+type User{
+    id: ID!
+    username:String!
+    email:String!
+    role :Role!
+    subscription:Subscription
+    apiKeys:[ApiKey]!
+}
+
+type UserResponse{
+    id: ID!
+    username:String!
+    email:String!
+    role :Role!
+    subscription :Subscription
+}
+
+type UserResponseGp{
+    id: ID!
+    username:String!
+    email:String!
+    role :Role!
+    subResponse :SubResponse
+    planResponse : PlanResponse
+    apiKeyResponse :[ApiKeyResponse]
+    videoResponse : [MediaResponse]
+    photoResponse : [MediaResponse]
+}
+
+type Subscription{
+    id:ID!
+    user:User!
+    plan :Plan!
+    startDate: String!
+    endDate: String!
+    status: SubscribeStatus!
+}
+
+type SubResponse{
+    id:ID!
+    planName:String!
+    userId:ID!
+    planId:ID!
+    startDate: String!
+    endDate: String!
+    status: SubscribeStatus!
+}
+
+type Plan{
+    id:ID!
+    name:String!
+    monthlyPrice:Float!
+    rateLimitPerMinute:Int!
+    isActive:Boolean!
+    mediaCount:Int!
+    subscriptions: [Subscription!]
+}
+
+type PlanResponse{
+    id:ID!
+    name:String!
+    monthlyPrice:Float!
+    rateLimitPerMinute:Int!
+    isActive:Boolean!
+    mediaCount:Int!
+}
+
+type ApiKey{
+    id:ID!
+    hashedKey:String!
+    prefix:String!
+    name:String!
+    createdAt:String!
+    expiresAt:String!
+    lastUsed:String
+    revoked:Boolean!
+    user:User!
+}
+
+type ApiKeyResponse{
+    id:ID!
+    prefix:String!
+    name:String!
+    createdAt:String!
+    expiresAt:String!
+    lastUsed:String
+    revoked:Boolean!
+}
+
+type Media{
+    id:ID!
+    filePath:String!
+    title:String!
+    user:User!
+    type:String!
+    isDeleted:Boolean!
+    stage:VideoStage
+}
+
+type  MediaResponse{
+    mediaId: ID!
+    mediaTitle:String!
+    type:String!
+    stage:VideoStage
+    isDeleted:Boolean!
+}
