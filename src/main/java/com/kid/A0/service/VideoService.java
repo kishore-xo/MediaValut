@@ -6,6 +6,7 @@ import com.kid.A0.model.*;
 import com.kid.A0.repo.MediaRepo;
 import com.kid.A0.repo.MediaVersionRepo;
 import com.kid.A0.repo.UserRepo;
+import com.kid.A0.service.Interface.VideoServiceInterface;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.UrlResource;
@@ -32,8 +33,7 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-@Transactional
-public class VideoService {
+public class VideoService implements VideoServiceInterface {
 
     private final MediaRepo mediaRepo;
     private final UserRepo userRepo;
@@ -50,6 +50,7 @@ public class VideoService {
         this.mediaVersionRepo = mediaVersionRepo;
     }
 
+    @Transactional
     public MediaResponse postVideo(Long userId, MultipartFile uploadVideo) throws IOException {
 
         if (uploadVideo.isEmpty()) throw new IllegalArgumentException("File Is Empty");
@@ -98,6 +99,7 @@ public class VideoService {
         return new MediaResponse(video);
     }
 
+    @Transactional
     public void deleteVideo(Principal principal, String videoId) {
         Long userId = Long.valueOf(principal.getName());
         Media video = mediaRepo.findByIdAndTypeAndIsDeleted(videoId, "video", false)
@@ -184,6 +186,7 @@ public class VideoService {
     }
 
     // this is done by scheduling
+    @Transactional
     public void deleteAll() {
         List<Media> videos = mediaRepo.findMediaByTypeEqualsAndIsDeleted("video", true);
 

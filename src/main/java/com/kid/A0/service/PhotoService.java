@@ -7,6 +7,7 @@ import com.kid.A0.model.Plan;
 import com.kid.A0.model.User;
 import com.kid.A0.repo.MediaRepo;
 import com.kid.A0.repo.UserRepo;
+import com.kid.A0.service.Interface.PhotoServiceInterface;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -16,6 +17,7 @@ import org.springframework.http.MediaTypeFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -30,7 +32,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-public class PhotoService {
+public class PhotoService implements PhotoServiceInterface {
 
     private final MediaRepo mediaRepo;
     private final UserRepo userRepo;
@@ -43,6 +45,7 @@ public class PhotoService {
         this.userRepo = userRepo;
     }
 
+    @Transactional
     public MediaResponse postPhoto(Long userId, MultipartFile photo) throws IOException {
         if (photo.isEmpty()) throw new IllegalArgumentException("File Is Empty");
 
@@ -83,6 +86,7 @@ public class PhotoService {
 
     }
 
+    @Transactional
     public void deletePhoto(long userId, String photoId) {
 
         Media photo = mediaRepo.findByIdAndTypeAndIsDeleted(photoId, "photo", false)

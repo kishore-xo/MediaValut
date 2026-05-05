@@ -5,22 +5,22 @@ import com.kid.A0.model.ApiKey;
 import com.kid.A0.model.User;
 import com.kid.A0.repo.ApiKeyRepo;
 import com.kid.A0.repo.UserRepo;
+import com.kid.A0.service.Interface.ApiKeyServiceInterface;
 import org.springframework.cache.annotation.CachePut;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-public class ApiKeyService {
+public class ApiKeyService implements ApiKeyServiceInterface {
 
     private final ApiKeyRepo apiKeyRepo;
     private final UserRepo userRepo;
@@ -59,6 +59,7 @@ public class ApiKeyService {
         }
     }
 
+    @Transactional
     public List<ApiKeyResponse> getApiKeys(Long userId) {
         List<ApiKey> apiKeys = apiKeyRepo.findByUserIdAndRevokedFalse(userId);
 

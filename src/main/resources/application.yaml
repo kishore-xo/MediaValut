@@ -4,6 +4,10 @@ spring:
   profiles:
     active: kid
 
+  web:
+    resources:
+      static-locations: ${SPRING_WEB_RESOURCES_STATIC_LOCATIONS:classpath:/static/}
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/A0}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}

@@ -8,15 +8,14 @@ import com.kid.A0.model.User;
 import com.kid.A0.repo.PlanRepo;
 import com.kid.A0.repo.SubscriptionRepo;
 import com.kid.A0.repo.UserRepo;
+import com.kid.A0.service.Interface.SubscriptionServiceInterface;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Optional;
 
 @Service
-@Transactional
-public class SubscriptionService {
+public class SubscriptionService implements SubscriptionServiceInterface {
     private final SubscriptionRepo subscriptionRepo;
     private final PlanRepo planRepo;
     private final UserRepo userRepo;
@@ -27,7 +26,8 @@ public class SubscriptionService {
         this.userRepo = userRepo;
     }
 
-    public SubResponse createSub(Long userId, String planName) {
+    @Transactional
+    public SubResponse createSub(long userId, String planName) {
         Plan plan = planRepo.findByName(planName)
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
 
@@ -47,7 +47,7 @@ public class SubscriptionService {
         return new SubResponse(subscription);
     }
 
-    public SubResponse getSub(Long userId) {
+    public SubResponse getSub(long userId) {
         Subscription subscription = subscriptionRepo.findByUserIdAndStatus(userId, SubscribeStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active subscription found for this user"));
         return new SubResponse(subscription);

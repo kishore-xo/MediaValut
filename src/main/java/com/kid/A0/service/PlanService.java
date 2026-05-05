@@ -4,15 +4,14 @@ import com.kid.A0.dto.PlanResponse;
 import com.kid.A0.dto.PlanUpdate;
 import com.kid.A0.model.Plan;
 import com.kid.A0.repo.PlanRepo;
-import org.springframework.cache.annotation.Cacheable;
+import com.kid.A0.service.Interface.PlanServiceInterface;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@Transactional
-public class PlanService {
+public class PlanService implements PlanServiceInterface {
 
     private final PlanRepo planRepo;
 
@@ -27,6 +26,7 @@ public class PlanService {
                 .toList();
     }
 
+    @Transactional
     public PlanResponse createPlan(PlanUpdate planUpdate) {
         boolean isExist = planRepo.existsPlanByName(planUpdate.name());
         if (isExist) throw new RuntimeException("plan already exist with this name");
@@ -41,20 +41,22 @@ public class PlanService {
         return new PlanResponse(plan);
     }
 
-    public PlanResponse getPlan(Long id) {
+    public PlanResponse getPlan(long id) {
         Plan plan = planRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
         return new PlanResponse(plan);
     }
 
-    public void deletePlan(Long id) {
+    @Transactional
+    public void deletePlan(long id) {
         Plan plan = planRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
         plan.setActive(false);
         planRepo.save(plan);
     }
 
-    public PlanResponse updatePlan(Long id, PlanUpdate planUpdate) {
+    @Transactional
+    public PlanResponse updatePlan(long id, PlanUpdate planUpdate) {
         Plan plan = planRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
         if (planUpdate.name() != null) {
@@ -74,7 +76,8 @@ public class PlanService {
         return new PlanResponse(plan);
     }
 
-    public PlanResponse replacePlan(Long id, PlanUpdate planUpdate) {
+    @Transactional
+    public PlanResponse replacePlan(long id, PlanUpdate planUpdate) {
         Plan plan = planRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
 

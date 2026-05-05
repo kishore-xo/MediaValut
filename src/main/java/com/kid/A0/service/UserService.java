@@ -5,6 +5,7 @@ import com.kid.A0.dto.UserResponse;
 import com.kid.A0.model.Role;
 import com.kid.A0.model.User;
 import com.kid.A0.repo.UserRepo;
+import com.kid.A0.service.Interface.UserServiceInterface;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheEvict;
@@ -19,8 +20,7 @@ import java.util.List;
 
 @Slf4j
 @Service
-@Transactional
-public class UserService {
+public class UserService implements UserServiceInterface {
 
     private static final String USER_CACHE = "user:v3";
 
@@ -39,11 +39,12 @@ public class UserService {
     }
 
     @Cacheable(cacheNames = USER_CACHE, key = "#id")
-    public UserResponse getUser(Long id) {
+    public UserResponse getUser(long id) {
         User user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         return new UserResponse(user);
     }
 
+    @Transactional
     @CachePut(cacheNames = USER_CACHE, key = "#result.id()")
     public UserResponse createUser(UserRequest userRequest) {
         User user = modelMapper.map(userRequest, User.class);
@@ -53,15 +54,17 @@ public class UserService {
         return new UserResponse(createUser);
     }
 
+    @Transactional
     @CacheEvict(cacheNames = USER_CACHE,key = "#id")
-    public String deleteUser(Long id) {
+    public String deleteUser(long id) {
         User user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         userRepo.delete(user);
         return "User delete";
     }
 
+    @Transactional
     @CachePut(cacheNames = USER_CACHE,key = "#targetId")
-    public UserResponse updateUser(Long userId, Long targetId, UserRequest userRequest) {
+    public UserResponse updateUser(long userId, long targetId, UserRequest userRequest) {
 
         User requested = userRepo.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -104,7 +107,7 @@ public class UserService {
     }
 
     @Cacheable(cacheNames = USER_CACHE,key = "#userId")
-    public UserResponse getMe(Long userId) {
+    public UserResponse getMe(long userId) {
         User user = userRepo.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
         return new UserResponse(user);
     }

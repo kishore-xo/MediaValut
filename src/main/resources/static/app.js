@@ -29,7 +29,7 @@ function getToken() {
 }
 
 function getApiKey() {
-    const v = ($('apiKey')?.value || '').trim() || ls(SK.apikey) || 'key';
+    const v = ($('apiKey')?.value || '').trim() || ls(SK.apikey) ||"";
     if ($('apiKey')) $('apiKey').value = v;
     ls(SK.apikey, v);
     return v;

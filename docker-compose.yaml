@@ -45,6 +45,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: root1234
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      SPRING_WEB_RESOURCES_STATIC_LOCATIONS: file:/app/static/,classpath:/static/
       JWT_SECRET_KEY: thisisasecretkeytogeneratejsontokenstyjgddy
       CUSTOM_KEY: key
       VIDEO_PATH: /app/video
@@ -52,6 +53,7 @@ services:
       VIDEO_FFMPEG: /usr/bin/ffmpeg
       VIDEO_FFPROBE: /usr/bin/ffprobe
     volumes:
+      - ./src/main/resources/static:/app/static
       - ./src/main/resources/video:/app/video
       - ./src/main/resources/photo:/app/photo
     depends_on:

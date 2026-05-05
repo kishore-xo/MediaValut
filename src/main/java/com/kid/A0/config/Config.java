@@ -48,14 +48,14 @@ public class Config {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(
-                        session -> session
-                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
                                 "/actuator/**", "/api/v1/auth/**",
-                                "/video-stream-test.html", "/dashboard.html", "/photo-test.html", "/graphiql/**", "/graphql").permitAll()
+                                "/graphiql/**", "/graphql",
+                                "/dashboard.html", "/a0-ui.css", "/app.js").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -83,7 +83,6 @@ public class Config {
         executor.initialize();
         return executor;
     }
-
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
