@@ -1,7 +1,7 @@
 spring:
   application:
     name: A0
-server.port=${PORT:8080}
+
   web:
     resources:
       static-locations: ${SPRING_WEB_RESOURCES_STATIC_LOCATIONS:classpath:/static/}
