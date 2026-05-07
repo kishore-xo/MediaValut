@@ -1,8 +1,6 @@
 spring:
   application:
     name: A0
-  profiles:
-    active: kid
 
   web:
     resources:
