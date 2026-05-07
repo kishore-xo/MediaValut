@@ -41,7 +41,7 @@ management:
         include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:*}
 
 server:
-  port: 8080
+port: ${PORT:8080}
   address: ${SERVER_ADDRESS:0.0.0.0}
 
 video:
