@@ -1,3 +1,8 @@
+// ─── Helpers ───
+const $ = id => document.getElementById(id);
+const ls = (k, v) => v !== undefined ? localStorage.setItem(k, v) : localStorage.getItem(k);
+const lsRm = k => localStorage.removeItem(k);
+
 // ─── Constants ───
 const SK = { jwt: 'a0.jwt', uid: 'a0.userId', uname: 'a0.username', apikey: 'a0.apiKey' };
 let currentPage = 'dashboard';
@@ -7,11 +12,11 @@ let switchController = null;
 let switchVersion = 0;
 let currentVideoId = null;
 let currentPhotoPreviewUrl = null;
-
-// ─── Helpers ───
-const $ = id => document.getElementById(id);
-const ls = (k, v) => v !== undefined ? localStorage.setItem(k, v) : localStorage.getItem(k);
-const lsRm = k => localStorage.removeItem(k);
+let publicSocket = null;
+let privateSocket = null;
+let activeContact = null;
+let chatHistory = JSON.parse(ls('a0.chatHistory') || '{}');
+let contactList = JSON.parse(ls('a0.contactList') || '[]');
 
 function toast(msg, type = 'info') {
     const c = $('toasts');
@@ -71,6 +76,8 @@ function navigate(page) {
     if (page === 'apikeys' && getToken()) fetchApiKeys();
     if (page === 'plans') fetchPlans();
     if (page === 'subscription' && getToken()) fetchCurrentSub();
+    if (page === 'publicchat') { if (getToken()) connectPublic(); else toast('Log in to use WebSockets', 'warning'); }
+    if (page === 'privatechat') { if (getToken()) connectPrivate(); else toast('Log in to use WebSockets', 'warning'); }
 }
 
 // ─── Auth ───
@@ -525,6 +532,202 @@ async function runGraphQL() {
     } catch (e) { toast('GraphQL error: ' + e.message, 'error'); $('gqlResult').textContent = e.message; }
 }
 
+// ─── WebSockets ───
+function connectPublic() {
+    const token = getToken();
+    if (!token) return toast('JWT required for WebSocket', 'error');
+
+    disconnectPublic();
+
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = location.host;
+
+    publicSocket = new WebSocket(`${protocol}//${host}/ws/public?token=${token}`);
+    publicSocket.onopen = () => {
+        const el = $('publicStatus');
+        if (el) { el.textContent = 'Connected'; el.className = 'badge badge-green'; }
+        addMessage('publicMessages', 'System', 'Connected to global broadcast', 'system');
+    };
+    publicSocket.onmessage = (e) => {
+        addMessage('publicMessages', 'Broadcast', e.data);
+    };
+    publicSocket.onclose = () => {
+        const el = $('publicStatus');
+        if (el) { el.textContent = 'Disconnected'; el.className = 'badge'; }
+    };
+    publicSocket.onerror = () => toast('Public WS Error', 'error');
+}
+
+function connectPrivate() {
+    const token = getToken();
+    if (!token) return toast('JWT required for WebSocket', 'error');
+
+    disconnectPrivate();
+
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = location.host;
+
+    privateSocket = new WebSocket(`${protocol}//${host}/ws/private?token=${token}`);
+    privateSocket.onopen = () => {
+        const el = $('privateStatus');
+        if (el) { el.textContent = 'Connected'; el.className = 'badge badge-green'; }
+        addMessage('privateMessages', 'System', 'Secure connection established', 'system');
+    };
+    privateSocket.onmessage = (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            const from = data.from || 'Unknown';
+            const content = data.content || '';
+            
+            // Save to history
+            saveToHistory(from, from, content, 'remote');
+            
+            if (activeContact && activeContact.toLowerCase() === from.toLowerCase()) {
+                addMessage('privateMessages', from, content, 'remote');
+            } else {
+                toast(`New message from ${from}`, 'info');
+            }
+            updateContactList();
+        } catch (err) {
+            console.error('WS Private error', err);
+        }
+    };
+    privateSocket.onclose = () => {
+        const el = $('privateStatus');
+        if (el) { el.textContent = 'Disconnected'; el.className = 'badge'; }
+    };
+    privateSocket.onerror = () => toast('Private WS Error', 'error');
+}
+
+function disconnectPublic() {
+    if (publicSocket) publicSocket.close();
+}
+
+function disconnectPrivate() {
+    if (privateSocket) privateSocket.close();
+}
+
+function sendPublicMessage() {
+    const input = $('publicInput');
+    const msg = input.value.trim();
+    if (!msg || !publicSocket || publicSocket.readyState !== WebSocket.OPEN) return;
+    publicSocket.send(msg);
+    addMessage('publicMessages', 'You', msg, 'self');
+    input.value = '';
+}
+
+function sendPrivateMessage() {
+    const target = activeContact;
+    const input = $('privateInput');
+    const msg = input.value.trim();
+    if (!target) return toast('Select a contact first', 'error');
+    if (!msg || !privateSocket || privateSocket.readyState !== WebSocket.OPEN) return;
+
+    const payload = JSON.stringify({
+        to: target,
+        from: ls(SK.uname) || 'Me',
+        content: msg
+    });
+
+    privateSocket.send(payload);
+    saveToHistory(target, 'You', msg, 'self');
+    addMessage('privateMessages', 'You', msg, 'self');
+    input.value = '';
+}
+
+// ─── WhatsApp Logic ───
+function addNewContact() {
+    const name = $('contactSearch').value.trim();
+    if (!name) return;
+    if (name === ls(SK.uname)) return toast("You can't chat with yourself", "warning");
+    
+    if (!contactList.includes(name)) {
+        contactList.unshift(name);
+        ls('a0.contactList', JSON.stringify(contactList));
+    }
+    $('contactSearch').value = '';
+    switchContact(name);
+}
+
+function updateContactList() {
+    const container = $('contactList');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    contactList.forEach(name => {
+        const history = chatHistory[name] || [];
+        const lastMsg = history.length ? history[history.length - 1].text : 'No messages';
+        
+        const el = document.createElement('div');
+        el.className = `whatsapp-contact ${activeContact === name ? 'active' : ''}`;
+        el.onclick = () => switchContact(name);
+        el.innerHTML = `
+            <div class="whatsapp-avatar">${(name[0] || '?').toUpperCase()}</div>
+            <div class="whatsapp-contact-info">
+                <div class="whatsapp-contact-name">${name}</div>
+                <div class="whatsapp-contact-last">${lastMsg}</div>
+            </div>
+        `;
+        container.appendChild(el);
+    });
+}
+
+function switchContact(name) {
+    activeContact = name;
+    $('chatPlaceholder').style.display = 'none';
+    $('activeChat').style.display = 'flex';
+    
+    $('activeChatName').textContent = name;
+    $('activeChatAvatar').textContent = (name[0] || '?').toUpperCase();
+    
+    const msgContainer = $('privateMessages');
+    msgContainer.innerHTML = '';
+    
+    const history = chatHistory[name] || [];
+    history.forEach(m => {
+        addMessage('privateMessages', m.sender, m.text, m.type);
+    });
+    
+    updateContactList();
+}
+
+function saveToHistory(contact, sender, text, type) {
+    if (!contactList.some(c => c.toLowerCase() === contact.toLowerCase())) {
+        contactList.unshift(contact);
+        ls('a0.contactList', JSON.stringify(contactList));
+    }
+    if (!chatHistory[contact]) chatHistory[contact] = [];
+    chatHistory[contact].push({ sender, text, type, time: Date.now() });
+    ls('a0.chatHistory', JSON.stringify(chatHistory));
+}
+
+function addMessage(containerId, sender, text, type = '') {
+    const c = $(containerId);
+    if (!c) return;
+
+    // Remove empty state
+    const empty = c.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    const m = document.createElement('div');
+    m.style.padding = '8px 12px';
+    m.style.borderRadius = 'var(--radius-sm)';
+    m.style.maxWidth = '85%';
+    m.style.wordBreak = 'break-word';
+
+    if (type === 'system') {
+        m.className = 'message-system';
+    } else if (type === 'self') {
+        m.className = 'message-self';
+    } else {
+        m.className = 'message-remote';
+    }
+
+    m.innerHTML = `<div style="font-weight:700;font-size:11px;margin-bottom:2px;opacity:0.8">${sender}</div><div>${text}</div>`;
+    c.appendChild(m);
+    c.scrollTop = c.scrollHeight;
+}
+
 // ─── Init ───
 function init() {
     // Mobile sidebar
@@ -544,6 +747,7 @@ function init() {
         loadProfile();
     }
 
+    updateContactList();
     navigate('dashboard');
 
     // Video player events

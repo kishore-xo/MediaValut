@@ -33,6 +33,8 @@ spring:
     schema:
       introspection:
         enabled: ${SPRING_GRAPHQL_SCHEMA_INTROSPECTION_ENABLED:true}
+#  profiles:
+#    active: kid
 
 management:
   endpoints:
@@ -41,7 +43,7 @@ management:
         include: ${MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE:*}
 
 server:
-port: ${PORT:8080}
+  port: ${PORT:8080}
   address: ${SERVER_ADDRESS:0.0.0.0}
 
 video:

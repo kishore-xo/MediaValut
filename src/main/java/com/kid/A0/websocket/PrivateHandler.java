@@ -50,8 +50,12 @@ public class PrivateHandler implements WebSocketHandler {
         WebSocketSession targetSession = sessions.get(targetId);
 
         if (targetSession != null && targetSession.isOpen()) {
-            targetSession.sendMessage(message);
-        } else {
+            if (!targetSession.getId().equals(session.getId())) {
+                targetSession.sendMessage(message);
+            } else {
+                log.info("User {} tried to send a message to their own current session.", session.getId());
+            }
+        } else{
             log.info("TargetUser is Offline: {}", targetId);
         }
     }

@@ -59,6 +59,12 @@
             <a class="nav-item" id="nav-graphql" onclick="navigate('graphql')">
                 <span class="nav-icon">⚡</span> GraphQL
             </a>
+            <a class="nav-item" id="nav-publicchat" onclick="navigate('publicchat')">
+                <span class="nav-icon">📢</span> Public Chat
+            </a>
+            <a class="nav-item" id="nav-privatechat" onclick="navigate('privatechat')">
+                <span class="nav-icon">🔒</span> Private Chat
+            </a>
             <a class="nav-item" href="/graphiql" style="text-decoration:none">
                 <span class="nav-icon">🧪</span> GraphiQL IDE
             </a>
@@ -353,6 +359,82 @@
     <div class="card">
         <div class="card-header"><h3>Result</h3></div>
         <pre id="gqlResult" style="min-height:200px;max-height:500px;overflow:auto;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;font-size:12px;font-family:'SF Mono','Cascadia Code','Fira Code',monospace;color:var(--text-secondary);white-space:pre-wrap;word-break:break-word;">No query run yet</pre>
+    </div>
+</div>
+
+<!-- ═══ PUBLIC CHAT PAGE ═══ -->
+<div class="page" id="page-publicchat">
+    <div class="page-header">
+        <h2>Public Broadcast</h2>
+        <p>Live stream of messages from all users on the platform.</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;height:600px;max-width:800px;margin:0 auto;">
+        <div class="card-header">
+            <h3>Global Chat</h3>
+            <span class="badge" id="publicStatus">Disconnected</span>
+        </div>
+        <div id="publicMessages" style="flex:1;overflow-y:auto;padding:16px;background:var(--bg-input);border-radius:var(--radius-sm);margin-bottom:16px;font-size:14px;display:flex;flex-direction:column;gap:12px;">
+            <div class="empty-state" style="margin:auto;"><div class="empty-icon">📢</div>No messages yet. Be the first!</div>
+        </div>
+        <div class="form-row" style="margin-top:auto;">
+            <input id="publicInput" placeholder="Send a message to everyone..." style="flex:1" onkeypress="if(event.key==='Enter') sendPublicMessage()" />
+            <button class="btn-primary" onclick="sendPublicMessage()">Send Broadcast</button>
+        </div>
+    </div>
+    <div class="btn-row" style="margin-top:18px;justify-content:center;">
+        <button onclick="connectPublic()">🔌 Connect</button>
+        <button class="btn-danger" onclick="disconnectPublic()">🔌 Disconnect</button>
+    </div>
+</div>
+
+<!-- ═══ PRIVATE CHAT PAGE ═══ -->
+<div class="page" id="page-privatechat">
+    <div class="page-header">
+        <h2>Private Messaging</h2>
+        <p>Chat with your contacts securely.</p>
+    </div>
+    
+    <div class="whatsapp-container">
+        <!-- Sidebar: Contact List -->
+        <div class="whatsapp-sidebar">
+            <div class="whatsapp-sidebar-header">
+                <h3>Chats</h3>
+                <button class="btn-ghost" onclick="addNewContact()" title="New Chat">+</button>
+            </div>
+            <div class="whatsapp-search">
+                <input id="contactSearch" placeholder="Search or start new chat" onkeypress="if(event.key==='Enter') addNewContact()" />
+            </div>
+            <div id="contactList" class="whatsapp-contact-list">
+                <!-- Contacts will be rendered here -->
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="whatsapp-chat" id="whatsappChat">
+            <div id="chatPlaceholder" class="whatsapp-placeholder">
+                <div class="empty-icon">🔒</div>
+                <h3>Select a contact to start chatting</h3>
+                <p>Your messages are broadcast live via WebSockets.</p>
+                <button class="btn-primary" onclick="connectPrivate()" id="privateConnectBtn">Connect to Service</button>
+            </div>
+            
+            <div id="activeChat" class="whatsapp-active-chat" style="display:none;">
+                <div class="whatsapp-chat-header">
+                    <div class="whatsapp-avatar" id="activeChatAvatar">?</div>
+                    <div class="whatsapp-chat-info">
+                        <div class="whatsapp-chat-name" id="activeChatName">Username</div>
+                        <div class="whatsapp-chat-status" id="privateStatus">Connected</div>
+                    </div>
+                </div>
+                <div id="privateMessages" class="whatsapp-messages">
+                    <!-- Messages will be rendered here -->
+                </div>
+                <div class="whatsapp-input-area">
+                    <input id="privateInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendPrivateMessage()" />
+                    <button class="btn-primary" onclick="sendPrivateMessage()">Send</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
