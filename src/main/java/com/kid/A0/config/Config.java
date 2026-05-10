@@ -55,7 +55,8 @@ public class Config {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
                                 "/actuator/**", "/api/v1/auth/**",
                                 "/graphiql/**", "/graphql",
-                                "/dashboard.html", "/a0-ui.css", "/app.js").permitAll()
+                                "/dashboard.html", "/a0-ui.css", "/app.js",
+                                "/ws/**").permitAll()
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
