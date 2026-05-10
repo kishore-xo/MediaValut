@@ -14,6 +14,8 @@ let currentVideoId = null;
 let currentPhotoPreviewUrl = null;
 let publicSocket = null;
 let privateSocket = null;
+let publicReconnectTimer = null;
+let privateReconnectTimer = null;
 let activeContact = null;
 let chatHistory = JSON.parse(ls('a0.chatHistory') || '{}');
 let contactList = JSON.parse(ls('a0.contactList') || '[]');
@@ -78,6 +80,18 @@ function navigate(page) {
     if (page === 'subscription' && getToken()) fetchCurrentSub();
     if (page === 'publicchat') { if (getToken()) connectPublic(); else toast('Log in to use WebSockets', 'warning'); }
     if (page === 'privatechat') { if (getToken()) connectPrivate(); else toast('Log in to use WebSockets', 'warning'); }
+    
+    // Update status badges if we're already connected
+    if (page === 'publicchat' && publicSocket && publicSocket.readyState === WebSocket.OPEN) {
+        const el = $('publicStatus');
+        if (el) { el.textContent = 'Connected'; el.className = 'badge badge-green'; }
+    }
+    if (page === 'privatechat' && privateSocket && privateSocket.readyState === WebSocket.OPEN) {
+        const el = $('privateStatus');
+        if (el) { el.textContent = 'Connected'; el.className = 'badge badge-green'; }
+        const cStatus = $('privateConnectStatus');
+        if (cStatus) { cStatus.textContent = 'Connected'; cStatus.className = 'whatsapp-chat-status'; }
+    }
 }
 
 // ─── Auth ───
@@ -132,6 +146,8 @@ async function doLogout() {
 
 function onLoginSuccess(d) {
     loadProfile();
+    connectPublic();
+    connectPrivate();
     navigate('dashboard');
 }
 
@@ -535,55 +551,84 @@ async function runGraphQL() {
 // ─── WebSockets ───
 function connectPublic() {
     const token = getToken();
-    if (!token) return toast('JWT required for WebSocket', 'error');
+    if (!token) return;
 
-    disconnectPublic();
+    if (publicSocket && (publicSocket.readyState === WebSocket.OPEN || publicSocket.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
 
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = location.host;
 
     publicSocket = new WebSocket(`${protocol}//${host}/ws/public?token=${token}`);
+    
     publicSocket.onopen = () => {
+        if (publicReconnectTimer) { clearInterval(publicReconnectTimer); publicReconnectTimer = null; }
         const el = $('publicStatus');
         if (el) { el.textContent = 'Connected'; el.className = 'badge badge-green'; }
         addMessage('publicMessages', 'System', 'Connected to global broadcast', 'system');
     };
+
     publicSocket.onmessage = (e) => {
         addMessage('publicMessages', 'Broadcast', e.data);
     };
+
     publicSocket.onclose = () => {
         const el = $('publicStatus');
         if (el) { el.textContent = 'Disconnected'; el.className = 'badge'; }
+        if (!publicReconnectTimer && currentPage === 'publicchat') {
+            publicReconnectTimer = setInterval(connectPublic, 5000);
+        }
     };
-    publicSocket.onerror = () => toast('Public WS Error', 'error');
+
+    publicSocket.onerror = () => {
+        const el = $('publicStatus');
+        if (el) { el.textContent = 'Connection Error'; el.className = 'badge badge-red'; }
+    };
 }
 
 function connectPrivate() {
     const token = getToken();
-    if (!token) return toast('JWT required for WebSocket', 'error');
+    if (!token) return;
 
-    disconnectPrivate();
+    if (privateSocket && (privateSocket.readyState === WebSocket.OPEN || privateSocket.readyState === WebSocket.CONNECTING)) {
+        return;
+    }
 
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = location.host;
 
     privateSocket = new WebSocket(`${protocol}//${host}/ws/private?token=${token}`);
+    
     privateSocket.onopen = () => {
+        if (privateReconnectTimer) { clearInterval(privateReconnectTimer); privateReconnectTimer = null; }
         const el = $('privateStatus');
         if (el) { el.textContent = 'Connected'; el.className = 'badge badge-green'; }
+        const cStatus = $('privateConnectStatus');
+        if (cStatus) { cStatus.textContent = 'Connected'; cStatus.className = 'whatsapp-chat-status'; }
         addMessage('privateMessages', 'System', 'Secure connection established', 'system');
     };
+
     privateSocket.onmessage = (e) => {
         try {
+            console.log('WS Private Message:', e.data);
             const data = JSON.parse(e.data);
+            
+            if (data.type === 'ERROR') {
+                toast(data.message || 'Server error', 'error');
+                return;
+            }
+
             const from = data.from || 'Unknown';
             const content = data.content || '';
+            const mediaUrl = data.mediaUrl;
+            const type = data.type || 'TEXT';
             
             // Save to history
-            saveToHistory(from, from, content, 'remote');
+            saveToHistory(from, from, content, 'remote', mediaUrl, type);
             
             if (activeContact && activeContact.toLowerCase() === from.toLowerCase()) {
-                addMessage('privateMessages', from, content, 'remote');
+                addMessage('privateMessages', from, content, 'remote', mediaUrl, type);
             } else {
                 toast(`New message from ${from}`, 'info');
             }
@@ -592,19 +637,32 @@ function connectPrivate() {
             console.error('WS Private error', err);
         }
     };
+
     privateSocket.onclose = () => {
         const el = $('privateStatus');
         if (el) { el.textContent = 'Disconnected'; el.className = 'badge'; }
+        const cStatus = $('privateConnectStatus');
+        if (cStatus) { cStatus.textContent = 'Offline'; cStatus.className = 'whatsapp-chat-status offline'; }
+        
+        if (!privateReconnectTimer && currentPage === 'privatechat') {
+            privateReconnectTimer = setInterval(connectPrivate, 5000);
+        }
     };
-    privateSocket.onerror = () => toast('Private WS Error', 'error');
+
+    privateSocket.onerror = () => {
+        const el = $('privateStatus');
+        if (el) { el.textContent = 'Connection Error'; el.className = 'badge badge-red'; }
+    };
 }
 
 function disconnectPublic() {
     if (publicSocket) publicSocket.close();
+    if (publicReconnectTimer) { clearInterval(publicReconnectTimer); publicReconnectTimer = null; }
 }
 
 function disconnectPrivate() {
     if (privateSocket) privateSocket.close();
+    if (privateReconnectTimer) { clearInterval(privateReconnectTimer); privateReconnectTimer = null; }
 }
 
 function sendPublicMessage() {
@@ -616,37 +674,85 @@ function sendPublicMessage() {
     input.value = '';
 }
 
-function sendPrivateMessage() {
+function sendPrivateMessage(mediaData = null) {
     const target = activeContact;
     const input = $('privateInput');
     const msg = input.value.trim();
+    
     if (!target) return toast('Select a contact first', 'error');
-    if (!msg || !privateSocket || privateSocket.readyState !== WebSocket.OPEN) return;
+    if (!privateSocket || privateSocket.readyState !== WebSocket.OPEN) return toast('Not connected to chat', 'error');
 
-    const payload = JSON.stringify({
+    let payload = {
         to: target,
-        from: ls(SK.uname) || 'Me',
-        content: msg
-    });
+        from: ls(SK.uid) || '0',
+        timestamp: Date.now()
+    };
 
-    privateSocket.send(payload);
-    saveToHistory(target, 'You', msg, 'self');
-    addMessage('privateMessages', 'You', msg, 'self');
-    input.value = '';
+    if (mediaData) {
+        payload.type = mediaData.type;
+        payload.mediaUrl = mediaData.url;
+        payload.content = mediaData.caption || '';
+    } else {
+        if (!msg) return;
+        payload.type = 'TEXT';
+        payload.content = msg;
+    }
+
+    privateSocket.send(JSON.stringify(payload));
+    saveToHistory(target, 'You', payload.content, 'self', payload.mediaUrl, payload.type);
+    addMessage('privateMessages', 'You', payload.content, 'self', payload.mediaUrl, payload.type);
+    if (!mediaData) input.value = '';
+}
+
+async function handleChatMedia(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    if (!isImage && !isVideo) return toast('Unsupported file type', 'error');
+
+    const type = isImage ? 'IMAGE' : 'VIDEO';
+    toast(`Uploading ${type.toLowerCase()}...`, 'info');
+
+    const fd = new FormData();
+    fd.append(isImage ? 'photo' : 'video', file);
+
+    try {
+        const endpoint = isImage ? '/api/v1/photo' : '/api/v1/video';
+        const r = await fetch(withApiKey(endpoint), { method: 'POST', headers: authHeaders(true), body: fd });
+        if (!r.ok) throw new Error(`${r.status}`);
+        const d = await r.json();
+        
+        const mediaId = d.mediaId;
+        const mediaUrl = isImage ? `/api/v1/photo/${mediaId}` : `/api/v1/video/${mediaId}`;
+        
+        sendPrivateMessage({
+            type: type,
+            url: mediaUrl,
+            caption: file.name
+        });
+        
+        toast(`${type} sent!`, 'success');
+    } catch (e) {
+        toast('Media upload failed: ' + e.message, 'error');
+    } finally {
+        input.value = '';
+    }
 }
 
 // ─── WhatsApp Logic ───
 function addNewContact() {
-    const name = $('contactSearch').value.trim();
-    if (!name) return;
-    if (name === ls(SK.uname)) return toast("You can't chat with yourself", "warning");
+    const nameOrId = $('contactSearch').value.trim();
+    if (!nameOrId) return;
+    if (nameOrId === ls(SK.uname) || nameOrId === ls(SK.uid)) return toast("You can't chat with yourself", "warning");
     
-    if (!contactList.includes(name)) {
-        contactList.unshift(name);
+    if (!contactList.includes(nameOrId)) {
+        contactList.unshift(nameOrId);
         ls('a0.contactList', JSON.stringify(contactList));
     }
     $('contactSearch').value = '';
-    switchContact(name);
+    switchContact(nameOrId);
 }
 
 function updateContactList() {
@@ -656,7 +762,13 @@ function updateContactList() {
     
     contactList.forEach(name => {
         const history = chatHistory[name] || [];
-        const lastMsg = history.length ? history[history.length - 1].text : 'No messages';
+        const last = history[history.length - 1];
+        let lastMsg = 'No messages';
+        if (last) {
+            if (last.mediaType === 'IMAGE') lastMsg = '📷 Photo';
+            else if (last.mediaType === 'VIDEO') lastMsg = '🎥 Video';
+            else lastMsg = last.text || '...';
+        }
         
         const el = document.createElement('div');
         el.className = `whatsapp-contact ${activeContact === name ? 'active' : ''}`;
@@ -685,23 +797,23 @@ function switchContact(name) {
     
     const history = chatHistory[name] || [];
     history.forEach(m => {
-        addMessage('privateMessages', m.sender, m.text, m.type);
+        addMessage('privateMessages', m.sender, m.text, m.type, m.mediaUrl, m.mediaType);
     });
     
     updateContactList();
 }
 
-function saveToHistory(contact, sender, text, type) {
+function saveToHistory(contact, sender, text, type, mediaUrl = null, mediaType = 'TEXT') {
     if (!contactList.some(c => c.toLowerCase() === contact.toLowerCase())) {
         contactList.unshift(contact);
         ls('a0.contactList', JSON.stringify(contactList));
     }
     if (!chatHistory[contact]) chatHistory[contact] = [];
-    chatHistory[contact].push({ sender, text, type, time: Date.now() });
+    chatHistory[contact].push({ sender, text, type, mediaUrl, mediaType, time: Date.now() });
     ls('a0.chatHistory', JSON.stringify(chatHistory));
 }
 
-function addMessage(containerId, sender, text, type = '') {
+function addMessage(containerId, sender, text, type = '', mediaUrl = null, mediaType = 'TEXT') {
     const c = $(containerId);
     if (!c) return;
 
@@ -710,20 +822,35 @@ function addMessage(containerId, sender, text, type = '') {
     if (empty) empty.remove();
 
     const m = document.createElement('div');
-    m.style.padding = '8px 12px';
-    m.style.borderRadius = 'var(--radius-sm)';
-    m.style.maxWidth = '85%';
-    m.style.wordBreak = 'break-word';
+    m.className = type === 'system' ? 'message-system' : (type === 'self' ? 'message-self' : 'message-remote');
 
-    if (type === 'system') {
-        m.className = 'message-system';
-    } else if (type === 'self') {
-        m.className = 'message-self';
-    } else {
-        m.className = 'message-remote';
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    let mediaHtml = '';
+    if (mediaUrl) {
+        const fullMediaUrl = withApiKey(mediaUrl);
+        if (mediaType === 'IMAGE') {
+            mediaHtml = `<div class="message-media-container"><img src="${fullMediaUrl}" loading="lazy" onclick="window.open('${fullMediaUrl}')" /></div>`;
+        } else if (mediaType === 'VIDEO') {
+            mediaHtml = `<div class="message-media-container"><video src="${fullMediaUrl}" controls preload="metadata"></video></div>`;
+        }
     }
 
-    m.innerHTML = `<div style="font-weight:700;font-size:11px;margin-bottom:2px;opacity:0.8">${sender}</div><div>${text}</div>`;
+    // Truncate long filenames/text if it's a media caption
+    let displayText = text || '';
+    if (mediaUrl && displayText.length > 60) {
+        displayText = displayText.substring(0, 57) + '...';
+    }
+
+    m.innerHTML = `
+        <div class="message-header">
+            <span class="message-sender">${sender}</span>
+            <span class="message-time">${time}</span>
+        </div>
+        ${mediaHtml}
+        <div class="message-text">${displayText}</div>
+    `;
+    
     c.appendChild(m);
     c.scrollTop = c.scrollHeight;
 }
@@ -745,6 +872,8 @@ function init() {
 
     if (savedToken) {
         loadProfile();
+        connectPublic();
+        connectPrivate();
     }
 
     updateContactList();

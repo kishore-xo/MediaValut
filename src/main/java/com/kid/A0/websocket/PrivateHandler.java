@@ -3,10 +3,10 @@ package com.kid.A0.websocket;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
-import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.Map;
@@ -15,8 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 public class PrivateHandler implements WebSocketHandler {
-    private final Map<String, WebSocketSession> sessions =
-            new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
 
     public PrivateHandler(ObjectMapper objectMapper) {
@@ -26,43 +25,90 @@ public class PrivateHandler implements WebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         String username = (String) session.getAttributes().get("username");
-        if (username != null) {
+        if (username != null && !username.isBlank()) {
             sessions.put(username, session);
             log.info("Connected to Private: {}", username);
-
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
-        String username = session.getAttributes().get("username").toString();
+        String username = (String) session.getAttributes().get("username");
         if (username != null) {
+            sessions.remove(username, session);
             log.info("Disconnected By Private: {}", username);
-            sessions.remove(username);
         }
     }
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+        ChatMessage payload = objectMapper.readValue(message.getPayload().toString(), ChatMessage.class);
+        validatePayload(session, payload);
 
-        JsonNode json = objectMapper.readTree(message.getPayload().toString());
-        String targetId = json.get("to").asString(null);
-        WebSocketSession targetSession = sessions.get(targetId);
-
+        WebSocketSession targetSession = sessions.get(payload.getTo());
         if (targetSession != null && targetSession.isOpen()) {
-            if (!targetSession.getId().equals(session.getId())) {
-                targetSession.sendMessage(message);
-            } else {
-                log.info("User {} tried to send a message to their own current session.", session.getId());
+            if (payload.getTimestamp() == null) {
+                payload.setTimestamp(System.currentTimeMillis());
             }
-        } else{
-            log.info("TargetUser is Offline: {}", targetId);
+            targetSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
+            return;
+        }
+
+        log.info("Target user is offline: {}", payload.getTo());
+        sendError(session, "USER_OFFLINE", "Target user is offline");
+    }
+
+    private void validatePayload(WebSocketSession session, ChatMessage payload) {
+        if (payload == null) {
+            throw new IllegalArgumentException("Message payload is required");
+        }
+        if (isBlank(payload.getTo()) || isBlank(payload.getFrom()) || payload.getType() == null) {
+            throw new IllegalArgumentException("Fields 'to', 'from', and 'type' are required");
+        }
+
+        String authenticatedUser = (String) session.getAttributes().get("username");
+        if (authenticatedUser == null || !authenticatedUser.equals(payload.getFrom())) {
+            throw new IllegalArgumentException(String.format("Sender identity mismatch: Authenticated as '%s' but payload says '%s'", authenticatedUser, payload.getFrom()));
+        }
+
+        if (payload.getType() == ChatMessage.MessageType.TEXT) {
+            if (isBlank(payload.getContent())) {
+                throw new IllegalArgumentException("Field 'content' is required for TEXT");
+            }
+            return;
+        }
+
+        if (isBlank(payload.getMediaUrl())) {
+            throw new IllegalArgumentException("Field 'mediaUrl' is required for IMAGE/VIDEO");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private void sendError(WebSocketSession session, String code, String message) {
+        try {
+            if (session != null && session.isOpen()) {
+                String errorJson = objectMapper.writeValueAsString(Map.of(
+                        "type", "ERROR",
+                        "code", code,
+                        "message", message
+                ));
+                session.sendMessage(new TextMessage(errorJson));
+            }
+        } catch ( Exception e) {
+            // ignore secondary transport errors while reporting failures
         }
     }
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) {
-
+        String username = (String) session.getAttributes().get("username");
+        if (username != null) {
+            sessions.remove(username, session);
+        }
+        log.warn("Private websocket transport error: {}", exception.getMessage());
     }
 
     @Override

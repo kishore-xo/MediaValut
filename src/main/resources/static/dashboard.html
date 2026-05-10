@@ -423,13 +423,15 @@
                     <div class="whatsapp-avatar" id="activeChatAvatar">?</div>
                     <div class="whatsapp-chat-info">
                         <div class="whatsapp-chat-name" id="activeChatName">Username</div>
-                        <div class="whatsapp-chat-status" id="privateStatus">Connected</div>
+                        <div class="whatsapp-chat-status" id="privateConnectStatus">Offline</div>
                     </div>
                 </div>
                 <div id="privateMessages" class="whatsapp-messages">
                     <!-- Messages will be rendered here -->
                 </div>
                 <div class="whatsapp-input-area">
+                    <button class="btn-ghost" onclick="$('chatMediaInput').click()" title="Attach Media">📎</button>
+                    <input type="file" id="chatMediaInput" style="display:none;" onchange="handleChatMedia(this)" accept="image/*,video/*" />
                     <input id="privateInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendPrivateMessage()" />
                     <button class="btn-primary" onclick="sendPrivateMessage()">Send</button>
                 </div>

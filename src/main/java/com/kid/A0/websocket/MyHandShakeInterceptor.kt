@@ -6,6 +6,7 @@ import org.springframework.http.server.ServerHttpResponse
 import org.springframework.stereotype.Component
 import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.server.HandshakeInterceptor
+import org.springframework.web.util.UriComponentsBuilder
 
 @Component
 class MyHandShakeInterceptor(private val jwtUtil: JwtUtil) : HandshakeInterceptor {
@@ -16,20 +17,24 @@ class MyHandShakeInterceptor(private val jwtUtil: JwtUtil) : HandshakeIntercepto
         wsHandler: WebSocketHandler,
         attributes: MutableMap<String, Any>
     ): Boolean {
-        val query = request.uri.query ?: return false;
-        val token = getId(query) ?: return false;
+        val token = UriComponentsBuilder.fromUri(request.uri)
+            .build()
+            .queryParams
+            .getFirst("token")
+            ?.trim()
+            ?: return false
 
-        try {
-            val username = jwtUtil.extractUserName(token);
-
-            if (username != null && !jwtUtil.isTokenExpired(token)) {
-                attributes["username"] = username;
-                return true;
+        return try {
+            val username = jwtUtil.extractUserName(token)
+            if (username.isNullOrBlank() || jwtUtil.isTokenExpired(token)) {
+                false
+            } else {
+                attributes["username"] = username
+                true
             }
-        } catch (e: kotlin.Exception) {
-
+        } catch (_: Exception) {
+            false
         }
-        return false;
     }
 
     override fun afterHandshake(
@@ -38,13 +43,7 @@ class MyHandShakeInterceptor(private val jwtUtil: JwtUtil) : HandshakeIntercepto
         wsHandler: WebSocketHandler,
         exception: Exception?
     ) {
-    }
-
-    fun getId(query: String): String? {
-        if (query.contains("token=")) {
-            return query.split("token=")[1].split("&")[0];
-        }
-        return null;
+        // no-op
     }
 
 }

@@ -43,7 +43,8 @@ public class VideoService implements VideoServiceInterface {
     @Value("${video.Path}")
     private String path;
 
-    public VideoService(MediaRepo mediaRepo, UserRepo userRepo, VideoFixService videoFixService, MediaVersionRepo mediaVersionRepo) {
+    public VideoService(MediaRepo mediaRepo, UserRepo userRepo, VideoFixService videoFixService,
+            MediaVersionRepo mediaVersionRepo) {
         this.mediaRepo = mediaRepo;
         this.userRepo = userRepo;
         this.videoFixService = videoFixService;
@@ -53,7 +54,8 @@ public class VideoService implements VideoServiceInterface {
     @Transactional
     public MediaResponse postVideo(Long userId, MultipartFile uploadVideo) throws IOException {
 
-        if (uploadVideo.isEmpty()) throw new IllegalArgumentException("File Is Empty");
+        if (uploadVideo.isEmpty())
+            throw new IllegalArgumentException("File Is Empty");
 
         if (!userRepo.existsUserById(userId)) {
             throw new AccessDeniedException("Unauthorized");
@@ -104,21 +106,24 @@ public class VideoService implements VideoServiceInterface {
         Long userId = Long.valueOf(principal.getName());
         Media video = mediaRepo.findByIdAndTypeAndIsDeleted(videoId, "video", false)
                 .orElseThrow(() -> new VideoNotFoundException("Video Not Found"));
-        if (!video.getUserId().equals(userId)) {
-            throw new RuntimeException("Unauthorized");
-        }
+        // if (!video.getUserId().equals(userId)) {
+        //     throw new RuntimeException("Unauthorized");
+        // }
         video.setDeleted(true);
         mediaRepo.save(video);
     }
 
-    public ResponseEntity<ResourceRegion> getVideo(Long userId, String videoId, String quality, HttpHeaders headers) throws IOException {
+    public ResponseEntity<ResourceRegion> getVideo(Long userId, String videoId, String quality, HttpHeaders headers)
+            throws IOException {
 
         Media video = mediaRepo.findByIdAndTypeAndIsDeleted(videoId, "video", false)
                 .orElseThrow(() -> new VideoNotFoundException("Video Not Found"));
-        if (!userId.equals(video.getUserId())) throw new AccessDeniedException("Unauthorized User");
-        if (VideoStage.PROCESSING.equals(video.getStage())) {
-            throw new RuntimeException("Video Upload Process Not Completed Yet");
-        }
+        // if (!userId.equals(video.getUserId()))
+        //     throw new AccessDeniedException("Unauthorized User");
+        
+        // if (VideoStage.PROCESSING.equals(video.getStage())) {
+        //     throw new RuntimeException("Video Upload Process Not Completed Yet");
+        // }
 
         String filePath = video.getFilePath();
         if (quality != null && !quality.isBlank() && !quality.equalsIgnoreCase("source")) {
@@ -156,7 +161,8 @@ public class VideoService implements VideoServiceInterface {
     public List<String> getVideoQualities(Long userId, String videoId) throws IOException {
         Media video = mediaRepo.findByIdAndTypeAndIsDeleted(videoId, "video", false)
                 .orElseThrow(() -> new VideoNotFoundException("Video Not Found"));
-        if (!userId.equals(video.getUserId())) throw new AccessDeniedException("Unauthorized User");
+        if (!userId.equals(video.getUserId()))
+            throw new AccessDeniedException("Unauthorized User");
 
         return mediaVersionRepo.findByMediaOrderByQualityAsc(video)
                 .stream()
@@ -168,7 +174,8 @@ public class VideoService implements VideoServiceInterface {
     public MediaResponse getVideoStatus(Long userId, String videoId) throws IOException {
         Media video = mediaRepo.findByIdAndTypeAndIsDeleted(videoId, "video", false)
                 .orElseThrow(() -> new VideoNotFoundException("Video Not Found"));
-        if (!userId.equals(video.getUserId())) throw new AccessDeniedException("Unauthorized User");
+        if (!userId.equals(video.getUserId()))
+            throw new AccessDeniedException("Unauthorized User");
         return new MediaResponse(video);
     }
 
@@ -230,8 +237,9 @@ public class VideoService implements VideoServiceInterface {
     private void handleVideoSize(Long userid, MultipartFile uploadVideo) {
         User user = userRepo.findByIdWithPlan(userid)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User Not Found"));
-        if(user.getSubscription() ==null ||user.getSubscription().getPlan()==null){
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,"User has no active plan configuration");
+        if (user.getSubscription() == null || user.getSubscription().getPlan() == null) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "User has no active plan configuration");
         }
         Plan plan = user.getSubscription().getPlan();
         DataSize videoSize = DataSize.parse(plan.getVideoSize());
@@ -242,4 +250,3 @@ public class VideoService implements VideoServiceInterface {
         }
     }
 }
-
