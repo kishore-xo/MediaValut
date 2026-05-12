@@ -19,6 +19,8 @@ let privateReconnectTimer = null;
 let activeContact = null;
 let chatHistory = JSON.parse(ls('a0.chatHistory') || '{}');
 let contactList = JSON.parse(ls('a0.contactList') || '[]');
+let pickerContext = 'public'; // 'public' or 'private'
+let pickerTab = 'photos'; // 'photos' or 'videos'
 
 function toast(msg, type = 'info') {
     const c = $('toasts');
@@ -137,11 +139,14 @@ function switchAuthTab(tab) {
 }
 
 async function doLogout() {
+    disconnectPublic();
+    disconnectPrivate();
     try { await fetch('/api/v1/auth/logout', { method: 'POST', headers: authHeaders(true) }); } catch (_) {}
     [SK.jwt, SK.uid, SK.uname].forEach(lsRm);
     if ($('jwtToken')) $('jwtToken').value = '';
     toast('Logged out', 'info');
     clearDashboardData();
+    navigate('dashboard');
 }
 
 function onLoginSuccess(d) {
@@ -549,6 +554,8 @@ async function runGraphQL() {
 }
 
 // ─── WebSockets ───
+
+
 function connectPublic() {
     const token = getToken();
     if (!token) return;
@@ -570,7 +577,18 @@ function connectPublic() {
     };
 
     publicSocket.onmessage = (e) => {
-        addMessage('publicMessages', 'Broadcast', e.data);
+        try {
+            const data = JSON.parse(e.data);
+            const from = data.from || 'Broadcast';
+            const content = data.content || '';
+            const mediaUrl = data.mediaUrl;
+            const type = data.type || 'TEXT';
+            
+            addMessage('publicMessages', from, content, 'remote', mediaUrl, type);
+        } catch (err) {
+            // Fallback for plain text messages if any
+            addMessage('publicMessages', 'Broadcast', e.data);
+        }
     };
 
     publicSocket.onclose = () => {
@@ -655,23 +673,180 @@ function connectPrivate() {
     };
 }
 
+
+
 function disconnectPublic() {
-    if (publicSocket) publicSocket.close();
+    if (publicSocket) {
+        publicSocket.onclose = null; // Prevent reconnect timer from firing
+        publicSocket.close();
+        publicSocket = null;
+    }
     if (publicReconnectTimer) { clearInterval(publicReconnectTimer); publicReconnectTimer = null; }
 }
 
 function disconnectPrivate() {
-    if (privateSocket) privateSocket.close();
+    if (privateSocket) {
+        privateSocket.onclose = null; // Prevent reconnect timer from firing
+        privateSocket.close();
+        privateSocket = null;
+    }
     if (privateReconnectTimer) { clearInterval(privateReconnectTimer); privateReconnectTimer = null; }
 }
 
-function sendPublicMessage() {
+
+
+function sendPublicMessage(mediaData = null) {
     const input = $('publicInput');
     const msg = input.value.trim();
-    if (!msg || !publicSocket || publicSocket.readyState !== WebSocket.OPEN) return;
-    publicSocket.send(msg);
-    addMessage('publicMessages', 'You', msg, 'self');
-    input.value = '';
+    if (!publicSocket || publicSocket.readyState !== WebSocket.OPEN) return toast('Not connected to public chat', 'error');
+
+    let payload = {
+        from: ls(SK.uname) || 'Anonymous',
+        timestamp: Date.now()
+    };
+
+    if (mediaData) {
+        payload.type = mediaData.type;
+        payload.mediaUrl = mediaData.url;
+        payload.content = mediaData.caption || '';
+    } else {
+        if (!msg) return;
+        payload.type = 'TEXT';
+        payload.content = msg;
+    }
+
+    publicSocket.send(JSON.stringify(payload));
+    addMessage('publicMessages', 'You', payload.content, 'self', payload.mediaUrl, payload.type);
+    if (!mediaData) input.value = '';
+}
+
+async function handlePublicChatMedia(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    if (!isImage && !isVideo) return toast('Unsupported file type', 'error');
+
+    const type = isImage ? 'IMAGE' : 'VIDEO';
+    toast(`Uploading to public: ${type.toLowerCase()}...`, 'info');
+
+    const fd = new FormData();
+    fd.append(isImage ? 'photo' : 'video', file);
+
+    try {
+        const endpoint = isImage ? '/api/v1/photo' : '/api/v1/video';
+        const r = await fetch(withApiKey(endpoint), { method: 'POST', headers: authHeaders(true), body: fd });
+        if (!r.ok) throw new Error(`${r.status}`);
+        const d = await r.json();
+        
+        const mediaId = d.mediaId;
+        const mediaUrl = isImage ? `/api/v1/photo/${mediaId}` : `/api/v1/video/${mediaId}`;
+        
+        sendPublicMessage({
+            type: type,
+            url: mediaUrl,
+            caption: file.name
+        });
+        
+        toast(`${type} broadcasted!`, 'success');
+    } catch (e) {
+        toast('Media upload failed: ' + e.message, 'error');
+    } finally {
+        input.value = '';
+        const modal = $('mediaPickerModal');
+        if (modal) modal.style.display = 'none';
+    }
+}
+
+// ─── Media Picker ───
+function showMediaOptions(context) {
+    pickerContext = context;
+    const modal = $('mediaPickerModal');
+    if (modal) modal.style.display = 'flex';
+    switchPickerTab('photos');
+}
+
+function triggerLocalUpload() {
+    if (pickerContext === 'public') {
+        const input = $('publicMediaInput');
+        if (input) input.click();
+    } else {
+        const input = $('chatMediaInput');
+        if (input) input.click();
+    }
+}
+
+async function switchPickerTab(tab) {
+    pickerTab = tab;
+    const ph = $('pickerTabPhotos');
+    const vi = $('pickerTabVideos');
+    if (ph) ph.classList.toggle('active', tab === 'photos');
+    if (vi) vi.classList.toggle('active', tab === 'videos');
+    fetchPickerMedia();
+}
+
+async function fetchPickerMedia() {
+    const grid = $('pickerGrid');
+    if (!grid) return;
+    grid.innerHTML = '<div class="empty-state">Loading library...</div>';
+    
+    try {
+        const endpoint = pickerTab === 'photos' ? '/api/v1/photo' : '/api/v1/video';
+        const r = await fetch(withApiKey(endpoint), { headers: authHeaders(true) });
+        if (!r.ok) throw new Error(`${r.status}`);
+        const items = await r.json();
+        renderPickerItems(items);
+    } catch (e) {
+        grid.innerHTML = `<div class="empty-state">Failed to load ${pickerTab}</div>`;
+    }
+}
+
+function renderPickerItems(items) {
+    const grid = $('pickerGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    if (!items || items.length === 0) {
+        grid.innerHTML = `<div class="empty-state">No ${pickerTab} found in library</div>`;
+        return;
+    }
+
+    items.forEach(item => {
+        const el = document.createElement('div');
+        el.className = 'picker-item';
+        const mediaId = item.mediaId;
+        const type = pickerTab === 'photos' ? 'IMAGE' : 'VIDEO';
+        const mediaUrl = pickerTab === 'photos' ? `/api/v1/photo/${mediaId}` : `/api/v1/video/${mediaId}`;
+        const fullUrl = withApiKey(mediaUrl);
+        
+        el.innerHTML = `
+            <div class="picker-thumb">
+                ${pickerTab === 'photos' 
+                    ? `<img src="${fullUrl}" loading="lazy" />` 
+                    : `<video src="${fullUrl}" preload="metadata"></video><span class="picker-video-badge">VIDEO</span>`}
+            </div>
+            <div class="picker-info">${item.mediaTitle || mediaId}</div>
+        `;
+        
+        el.onclick = () => selectMediaFromPicker({
+            type: type,
+            url: mediaUrl,
+            caption: item.mediaTitle || (pickerTab === 'photos' ? 'Shared Photo' : 'Shared Video')
+        });
+        grid.appendChild(el);
+    });
+}
+
+function selectMediaFromPicker(mediaData) {
+    if (pickerContext === 'public') {
+        sendPublicMessage(mediaData);
+    } else {
+        sendPrivateMessage(mediaData);
+    }
+    const modal = $('mediaPickerModal');
+    if (modal) modal.style.display = 'none';
+    toast(`${mediaData.type} shared from library`, 'success');
 }
 
 function sendPrivateMessage(mediaData = null) {
@@ -738,6 +913,8 @@ async function handleChatMedia(input) {
         toast('Media upload failed: ' + e.message, 'error');
     } finally {
         input.value = '';
+        const modal = $('mediaPickerModal');
+        if (modal) modal.style.display = 'none';
     }
 }
 

@@ -498,3 +498,33 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
     .whatsapp-container { height: 80vh; flex-direction: column; }
     .whatsapp-sidebar { width: 100%; height: 200px; }
 }
+/* ─── MODAL ─── */
+.modal {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    padding: 20px; animation: modalFadeIn 0.3s ease;
+}
+.modal-content {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px; width: 100%;
+    box-shadow: var(--shadow-lg); animation: modalSlideUp 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h3 { font-size: 18px; font-weight: 700; }
+.modal-footer { margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-subtle); }
+
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalSlideUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* ─── PICKER ITEMS ─── */
+.picker-item {
+    cursor: pointer; border: 1px solid var(--border); border-radius: var(--radius-sm);
+    overflow: hidden; background: var(--bg-input); transition: all var(--transition);
+    aspect-ratio: 16/10; display: flex; flex-direction: column;
+}
+.picker-item:hover { border-color: var(--accent); transform: scale(1.02); box-shadow: var(--shadow-sm); }
+.picker-thumb { flex: 1; background: #000; overflow: hidden; position: relative; }
+.picker-thumb img, .picker-thumb video { width: 100%; height: 100%; object-fit: cover; }
+.picker-info { padding: 8px; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: rgba(0,0,0,0.3); }
+.picker-video-badge { position: absolute; top: 5px; right: 5px; background: rgba(0,0,0,0.6); padding: 2px 5px; border-radius: 4px; font-size: 10px; }

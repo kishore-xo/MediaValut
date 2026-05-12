@@ -33,6 +33,11 @@ spring:
     schema:
       introspection:
         enabled: ${SPRING_GRAPHQL_SCHEMA_INTROSPECTION_ENABLED:true}
+
+  rabbitmq:
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+
 #  profiles:
 #    active: kid
 
