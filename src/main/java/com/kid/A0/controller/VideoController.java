@@ -30,12 +30,12 @@ public class VideoController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MediaResponse> postVideo(Principal principal, @RequestParam("video") MultipartFile video) throws IOException {
         return ResponseEntity.ok()
-                .body(videoService.postVideo(Long.valueOf(principal.getName()), video));
+                .body(videoService.postVideo(principal.getName(), video));
     }
 
     @DeleteMapping("/{videoId}")
     public ResponseEntity<Void> deleteVideo(Principal principal, @PathVariable String videoId) {
-        videoService.deleteVideo(principal, videoId);
+        videoService.deleteVideo(principal.getName(), videoId);
         return ResponseEntity.noContent().build();
     }
 
@@ -44,27 +44,24 @@ public class VideoController {
                                                    Principal principal,
                                                    @PathVariable String videoId,
                                                    @RequestHeader HttpHeaders headers) throws IOException {
-        Long userId = Long.parseLong(principal.getName());
-        return videoService.getVideo(userId, videoId, quality, headers);
+        return videoService.getVideo(principal.getName(), videoId, quality, headers);
     }
 
     @GetMapping("/{videoId}/qualities")
     public ResponseEntity<List<String>> getVideoQualities(Principal principal,
                                                           @PathVariable String videoId) throws IOException {
-        Long userId = Long.parseLong(principal.getName());
-        return ResponseEntity.ok(videoService.getVideoQualities(userId, videoId));
+        return ResponseEntity.ok(videoService.getVideoQualities(principal.getName(), videoId));
     }
 
     @GetMapping("/{videoId}/status")
     public ResponseEntity<MediaResponse> getVideoStatus(Principal principal,
                                                         @PathVariable String videoId) throws IOException {
-        Long userId = Long.parseLong(principal.getName());
-        return ResponseEntity.ok(videoService.getVideoStatus(userId, videoId));
+        return ResponseEntity.ok(videoService.getVideoStatus(principal.getName(), videoId));
     }
 
     @GetMapping
     public ResponseEntity<List<MediaResponse>> getVideos(Principal principal) {
-        return ResponseEntity.ok(videoService.getVideos(principal));
+        return ResponseEntity.ok(videoService.getVideos(principal.getName()));
     }
 
 }

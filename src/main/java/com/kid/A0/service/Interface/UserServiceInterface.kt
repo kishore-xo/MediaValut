@@ -13,7 +13,7 @@ interface UserServiceInterface {
 
     fun deleteUser(id: Long): String
 
-    fun updateUser(id: Long,targetId: Long,userRequest: UserRequest): UserResponse
+    fun updateUser(username: String, targetId: Long, userRequest: UserRequest): UserResponse
 
-    fun getMe(id:Long): UserResponse
+    fun getMe(username: String): UserResponse
 }

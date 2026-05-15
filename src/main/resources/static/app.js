@@ -859,7 +859,7 @@ function sendPrivateMessage(mediaData = null) {
 
     let payload = {
         to: target,
-        from: ls(SK.uid) || '0',
+        from: ls(SK.uname) || 'Anonymous',
         timestamp: Date.now()
     };
 

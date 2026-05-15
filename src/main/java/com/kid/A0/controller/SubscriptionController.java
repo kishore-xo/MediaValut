@@ -19,14 +19,12 @@ public class SubscriptionController {
 
     @PostMapping
     public ResponseEntity<SubResponse> createSub(Principal principal, @RequestParam String planName) {
-        Long userId = Long.valueOf(principal.getName());
-        SubResponse sub = subscriptionService.createSub(userId, planName);
+        SubResponse sub = subscriptionService.createSub(principal.getName(), planName);
         return ResponseEntity.ok(sub);
     }
 
     @GetMapping("/current")
     public ResponseEntity<SubResponse> getSub(Principal principal) {
-        Long userId = Long.parseLong(principal.getName());
-        return ResponseEntity.ok(subscriptionService.getSub(userId));
+        return ResponseEntity.ok(subscriptionService.getSub(principal.getName()));
     }
 }

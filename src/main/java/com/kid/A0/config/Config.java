@@ -54,6 +54,7 @@ public class Config {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**",
                                 "/actuator/**", "/api/v1/auth/**",
+                                "/api/v1/plan",
                                 "/graphiql/**", "/graphql",
                                 "/dashboard.html", "/a0-ui.css", "/app.js").permitAll()
                         .anyRequest().authenticated())

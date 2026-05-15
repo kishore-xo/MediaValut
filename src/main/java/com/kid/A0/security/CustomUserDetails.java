@@ -1,6 +1,7 @@
 package com.kid.A0.security;
 
 import com.kid.A0.model.User;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -28,8 +29,8 @@ public class CustomUserDetails implements UserDetails {
     }
 
     @Override
-    public String getUsername() {
-        return String.valueOf(user.getId());
+    public @NonNull String getUsername() {
+        return user.getUsername();
     }
 
 }

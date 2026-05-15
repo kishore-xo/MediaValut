@@ -12,6 +12,14 @@ import java.util.Optional;
 public interface UserRepo extends JpaRepository<User, Long> {
     Optional<User> findUserByUsername(String username);
 
+    @Query("""
+           SELECT u FROM User u 
+           LEFT JOIN FETCH u.subscription s 
+           LEFT JOIN FETCH s.plan 
+           WHERE u.username = :username
+           """)
+    Optional<User> findByUsernameWithPlan(@Param("username") String username);
+
     boolean existsUserByUsername(String username);
 
     boolean existsUserByEmail(String email);

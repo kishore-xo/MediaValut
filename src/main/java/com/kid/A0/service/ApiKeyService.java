@@ -32,11 +32,11 @@ public class ApiKeyService implements ApiKeyServiceInterface {
     }
 
     @CachePut(cacheNames =CACHE_NAME,key = "#result.id()")
-    public ApiKeyResponse createKey(Long userId, String keyName) {
+    public ApiKeyResponse createKey(String username, String keyName) {
         String rawKey = "water-law" + UUID.randomUUID().toString().replace("-", "");
         String hashKey = hash(rawKey);
 
-        User user = userRepo.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
+        User user = currentUser(username);
         ApiKey apiKey = ApiKey.builder()
                 .user(user)
                 .hashedKey(hashKey)
@@ -60,19 +60,26 @@ public class ApiKeyService implements ApiKeyServiceInterface {
     }
 
     @Transactional
-    public List<ApiKeyResponse> getApiKeys(Long userId) {
-        List<ApiKey> apiKeys = apiKeyRepo.findByUserIdAndRevokedFalse(userId);
+    public List<ApiKeyResponse> getApiKeys(String username) {
+        User user = currentUser(username);
+        List<ApiKey> apiKeys = apiKeyRepo.findByUserIdAndRevokedFalse(user.getId());
 
         return apiKeys.stream().map(ApiKeyResponse::new).toList();
     }
 
-    public void revokeKey(Long userId, Long keyId) {
-        ApiKey apiKey = apiKeyRepo.findByUserIdAndId(userId, keyId)
+    public void revokeKey(String username, Long keyId) {
+        User user = currentUser(username);
+        ApiKey apiKey = apiKeyRepo.findByUserIdAndId(user.getId(), keyId)
                 .orElseThrow(() -> new RuntimeException("key not found or unauthorized"));
         if (apiKey.isRevoked()) {
             throw new RuntimeException("Key already Revoked");
         }
         apiKey.setRevoked(true);
         apiKeyRepo.save(apiKey);
+    }
+
+    private User currentUser(String username) {
+        return userRepo.findUserByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
     }
 }

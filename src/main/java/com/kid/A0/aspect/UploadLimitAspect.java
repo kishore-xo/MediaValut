@@ -37,14 +37,14 @@ public class UploadLimitAspect {
         Object principal = auth.getPrincipal();
 
         assert principal != null;
-        Long userId = Long.parseLong(((CustomUserDetails) principal).getUsername());
+        String username = ((CustomUserDetails) principal).getUsername();
 
-        User user = userRepo.findByIdWithPlan(userId)
+        User user = userRepo.findByUsernameWithPlan(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
 
         int allowedCount = user.getSubscription().getPlan().getMediaCount();
         String mediaType = checkUploadLimit.type();
-        int count = mediaRepo.countByUserIdAndTypeAndIsDeletedFalse(userId, mediaType);
+        int count = mediaRepo.countByUserIdAndTypeAndIsDeletedFalse(user.getId(), mediaType);
         if (count >= allowedCount) {
             throw new RuntimeException("Limit exceeded! Your plan allows only " + allowedCount + " " + mediaType + "s.");
         }

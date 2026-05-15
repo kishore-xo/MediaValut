@@ -20,21 +20,18 @@ public class ApiKeyController {
 
     @PostMapping("/{keyName}")
     public ResponseEntity<ApiKeyResponse> createKey(Principal principal, @PathVariable String keyName) {
-        Long userId = Long.parseLong(principal.getName());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(apiKeyService.createKey(userId, keyName));
+                .body(apiKeyService.createKey(principal.getName(), keyName));
     }
 
     @GetMapping
     public ResponseEntity<List<ApiKeyResponse>> getApiKeys(Principal principal) {
-        Long userId = Long.parseLong(principal.getName());
-        return ResponseEntity.ok(apiKeyService.getApiKeys(userId));
+        return ResponseEntity.ok(apiKeyService.getApiKeys(principal.getName()));
     }
 
     @DeleteMapping("/{keyId}")
     public ResponseEntity<Void> deleteApiKey(Principal principal, @PathVariable Long keyId) {
-        Long userId = Long.parseLong(principal.getName());
-        apiKeyService.revokeKey(userId, keyId);
+        apiKeyService.revokeKey(principal.getName(), keyId);
         return ResponseEntity.noContent().build();
     }
 }

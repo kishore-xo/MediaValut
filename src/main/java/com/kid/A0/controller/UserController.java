@@ -38,9 +38,7 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<UserResponse> me(Principal principal) {
-        Long userId = Long.parseLong(principal.getName());
-
-        return ResponseEntity.ok(userService.getMe(userId));
+        return ResponseEntity.ok(userService.getMe(principal.getName()));
     }
 
     @PostMapping
@@ -57,7 +55,7 @@ public class UserController {
     public ResponseEntity<UserResponse> updateUser(Principal principal,
                                                    @PathVariable Long id,
                                                    @Valid @RequestBody UserRequest userRequest) {
-        return ResponseEntity.ok(userService.updateUser(Long.parseLong(principal.getName()), id, userRequest));
+        return ResponseEntity.ok(userService.updateUser(principal.getName(), id, userRequest));
     }
 
 }

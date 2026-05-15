@@ -46,10 +46,10 @@ public class PhotoService implements PhotoServiceInterface {
     }
 
     @Transactional
-    public MediaResponse postPhoto(Long userId, MultipartFile photo) throws IOException {
+    public MediaResponse postPhoto(String username, MultipartFile photo) throws IOException {
         if (photo.isEmpty()) throw new IllegalArgumentException("File Is Empty");
 
-        User user = userRepo.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User not Found"));
+        User user = currentUser(username);
 
         String contentType = photo.getContentType();
 
@@ -77,7 +77,7 @@ public class PhotoService implements PhotoServiceInterface {
                 .id(photoId)
                 .filePath(uploadPath.toString())
                 .title(photo.getOriginalFilename())
-                .userId(userId)
+                .userId(user.getId())
                 .type("photo")
                 .isDeleted(false)
                 .build();
@@ -87,12 +87,13 @@ public class PhotoService implements PhotoServiceInterface {
     }
 
     @Transactional
-    public void deletePhoto(long userId, String photoId) {
+    public void deletePhoto(String username, String photoId) {
 
+        User user = currentUser(username);
         Media photo = mediaRepo.findByIdAndTypeAndIsDeleted(photoId, "photo", false)
                 .orElseThrow(() -> new PhotoNotFoundException("Photo Not Found"));
 
-        if (!photo.getUserId().equals(userId)) {
+        if (!photo.getUserId().equals(user.getId())) {
             throw new RuntimeException("Unauthorized");
         }
         photo.setDeleted(true);
@@ -112,15 +113,13 @@ public class PhotoService implements PhotoServiceInterface {
         mediaRepo.deleteAll(photos);
     }
 
-    public ResponseEntity<Resource> getPhoto(Long userId, String photoId) {
-        if (!userRepo.existsUserById(userId)) {
-            throw new UsernameNotFoundException("User Not Found");
-        }
+    public ResponseEntity<Resource> getPhoto(String username, String photoId) {
+        User user = currentUser(username);
         Media photo = mediaRepo.findByIdAndTypeAndIsDeleted(photoId, "photo", false)
                 .orElseThrow(() -> new PhotoNotFoundException("Photo Not Found"));
-        // if (!photo.getUserId().equals(userId)) {
-        //     throw new RuntimeException("Unauthorized");
-        // }
+//        if (!photo.getUserId().equals(user.getId())) {
+//            throw new RuntimeException("Unauthorized");
+//        }
 
         try {
             Path photoPath = Path.of(photo.getFilePath());
@@ -139,17 +138,19 @@ public class PhotoService implements PhotoServiceInterface {
         }
     }
 
-    public List<MediaResponse> getPhotos(Principal principal) {
-        Long userId = Long.valueOf(principal.getName());
-        if (!userRepo.existsUserById(userId)) {
-            throw new UsernameNotFoundException("User Not Found");
-        }
+    public List<MediaResponse> getPhotos(String username) {
+        User user = currentUser(username);
         List<MediaResponse> responses = mediaRepo
-                .findMediaByUserIdAndTypeAndIsDeleted(userId, "photo", false)
+                .findMediaByUserIdAndTypeAndIsDeleted(user.getId(), "photo", false)
                 .stream()
                 .map(MediaResponse::new)
                 .toList();
         return responses;
+    }
+
+    private User currentUser(String username) {
+        return userRepo.findUserByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
     }
 
     private void handlePhotoSize(User user, MultipartFile uploadPhoto) {

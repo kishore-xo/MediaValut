@@ -64,9 +64,9 @@ public class UserService implements UserServiceInterface {
 
     @Transactional
     @CachePut(cacheNames = USER_CACHE,key = "#targetId")
-    public UserResponse updateUser(long userId, long targetId, UserRequest userRequest) {
+    public UserResponse updateUser(String username, long targetId, UserRequest userRequest) {
 
-        User requested = userRepo.findById(userId)
+        User requested = userRepo.findUserByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         boolean isAdmin = Role.ADMIN.equals(requested.getRole());
@@ -106,9 +106,9 @@ public class UserService implements UserServiceInterface {
         return new UserResponse(targetUser);
     }
 
-    @Cacheable(cacheNames = USER_CACHE,key = "#userId")
-    public UserResponse getMe(long userId) {
-        User user = userRepo.findById(userId).orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
+    @Cacheable(cacheNames = USER_CACHE,key = "#username")
+    public UserResponse getMe(String username) {
+        User user = userRepo.findUserByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
         return new UserResponse(user);
     }
 }

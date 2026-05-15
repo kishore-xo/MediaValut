@@ -6,10 +6,10 @@ import java.util.List;
 
 public interface ApiKeyServiceInterface {
 
-    ApiKeyResponse createKey(Long userId, String keyName);
+    ApiKeyResponse createKey(String username, String keyName);
 
-    List<ApiKeyResponse> getApiKeys(Long userId);
+    List<ApiKeyResponse> getApiKeys(String username);
 
-    void revokeKey(Long userId, Long keyId);
+    void revokeKey(String username, Long keyId);
 
 }

@@ -30,24 +30,24 @@ public class PhotoController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MediaResponse> postPhoto(Principal principal, @RequestParam("photo") MultipartFile photo) throws IOException {
 
-        MediaResponse response = photoService.postPhoto(Long.parseLong(principal.getName()), photo);
+        MediaResponse response = photoService.postPhoto(principal.getName(), photo);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(response);
     }
 
     @DeleteMapping("/{photoId}")
     public ResponseEntity<?> deletePhoto(Principal principal, @PathVariable String photoId) {
-        photoService.deletePhoto(Long.parseLong(principal.getName()), photoId);
+        photoService.deletePhoto(principal.getName(), photoId);
         return ResponseEntity.status(HttpStatus.OK).body("Deleted");
     }
 
     @GetMapping("/{photoId}")
     public ResponseEntity<Resource> getPhoto(Principal principal, @PathVariable String photoId) {
-        return photoService.getPhoto(Long.parseLong(principal.getName()), photoId);
+        return photoService.getPhoto(principal.getName(), photoId);
     }
 
     @GetMapping
     public ResponseEntity<List<MediaResponse>> getPhotos(Principal principal) {
-        return ResponseEntity.ok(photoService.getPhotos(principal));
+        return ResponseEntity.ok(photoService.getPhotos(principal.getName()));
     }
 }

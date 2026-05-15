@@ -27,14 +27,13 @@ public class SubscriptionService implements SubscriptionServiceInterface {
     }
 
     @Transactional
-    public SubResponse createSub(long userId, String planName) {
+    public SubResponse createSub(String username, String planName) {
         Plan plan = planRepo.findByName(planName)
                 .orElseThrow(() -> new RuntimeException("Plan not found"));
 
-        Subscription subscription = subscriptionRepo.findByUserIdAndStatus(userId, SubscribeStatus.ACTIVE)
+        User user = currentUser(username);
+        Subscription subscription = subscriptionRepo.findByUserIdAndStatus(user.getId(), SubscribeStatus.ACTIVE)
                 .orElse(new Subscription());
-        User user = userRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User Not found"));
 
 
         subscription.setUser(user);
@@ -47,8 +46,9 @@ public class SubscriptionService implements SubscriptionServiceInterface {
         return new SubResponse(subscription);
     }
 
-    public SubResponse getSub(long userId) {
-        Subscription subscription = subscriptionRepo.findByUserIdAndStatus(userId, SubscribeStatus.ACTIVE)
+    public SubResponse getSub(String username) {
+        User user = currentUser(username);
+        Subscription subscription = subscriptionRepo.findByUserIdAndStatus(user.getId(), SubscribeStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active subscription found for this user"));
         return new SubResponse(subscription);
     }
@@ -57,6 +57,11 @@ public class SubscriptionService implements SubscriptionServiceInterface {
         Subscription subscription = subscriptionRepo.findByUserIdAndStatus(userId,SubscribeStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException("No active subscription found for this user"));
         return subscription.getPlan().getRateLimitPerMinute();
+    }
+
+    private User currentUser(String username) {
+        return userRepo.findUserByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User Not found"));
     }
 
 }

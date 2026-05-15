@@ -38,7 +38,7 @@ public class AuthController {
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
-        String token = jwtUtil.generateToken(String.valueOf(user.getId()));
+        String token = jwtUtil.generateToken(user.getUsername());
         ResponseCookie cookie = ResponseCookie.from("a0_token", token)
                 .httpOnly(true)
                 .secure(false)

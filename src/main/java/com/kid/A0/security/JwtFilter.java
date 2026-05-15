@@ -71,6 +71,11 @@ public class JwtFilter extends OncePerRequestFilter {
             return authHeader.substring(7);
         }
 
+        String tokenParam = request.getParameter("token");
+        if (tokenParam != null && !tokenParam.isBlank()) {
+            return tokenParam;
+        }
+
         Cookie[] cookies = request.getCookies();
         if (cookies == null) {
             return null;

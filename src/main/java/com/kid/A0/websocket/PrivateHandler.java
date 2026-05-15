@@ -1,17 +1,14 @@
 package com.kid.A0.websocket;
 
-import com.kid.A0.websocket.rabbitMQ.RabbitMQConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.annotation.QueueBinding;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.CloseStatus;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.WebSocketMessage;
-import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.*;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -22,109 +19,125 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class PrivateHandler implements WebSocketHandler {
 
-    private final Map<String, SimpleMessageListenerContainer> sessions = new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
+    private final Map<String, SimpleMessageListenerContainer> listenerContainerMap = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
     private final RabbitTemplate rabbitTemplate;
+    private final DirectExchange directExchange;
     private final AmqpAdmin amqpAdmin;
-    private final TopicExchange topicExchange;
     private final ConnectionFactory connectionFactory;
 
-    public PrivateHandler(ObjectMapper objectMapper, RabbitTemplate rabbitTemplate, AmqpAdmin amqpAdmin, TopicExchange topicExchange, ConnectionFactory connectionFactory) {
+    public PrivateHandler(ObjectMapper objectMapper, RabbitTemplate rabbitTemplate, DirectExchange directExchange, AmqpAdmin amqpAdmin, ConnectionFactory connectionFactory) {
         this.objectMapper = objectMapper;
         this.rabbitTemplate = rabbitTemplate;
+        this.directExchange = directExchange;
         this.amqpAdmin = amqpAdmin;
-        this.topicExchange = topicExchange;
         this.connectionFactory = connectionFactory;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        String username = (String) session.getAttributes().get("username");
-//        if (username != null && !username.isBlank()) {
-//            sessions.put(username, session);
-//            log.info("Connected to Private: {}", username);
-//        }
-        Queue queue = new Queue(username, true);
+        String username = session.getAttributes().get("username").toString();
+        log.info("conneceted to private {}", username);
+
+        sessionMap.put(username, session);
+        Queue queue = new Queue(username, true, false, true);
         amqpAdmin.declareQueue(queue);
 
-        Binding binding = BindingBuilder.bind(queue)
-                .to(topicExchange)
+        Binding binding = BindingBuilder
+                .bind(queue)
+                .to(directExchange)
                 .with(username);
         amqpAdmin.declareBinding(binding);
 
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-        container.setQueueNames(username);
-        container.setConnectionFactory(connectionFactory);
+        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(connectionFactory);
+        container.setQueueNames(queue.getName());
         container.setMessageListener(message -> {
             try {
-                session.sendMessage(new TextMessage(new String(message.getBody())));
-            } catch (IOException e) {
-                log.error("Fail to push message");
+                if (session.isOpen()) {
+                    session.sendMessage(new TextMessage(message.getBody()));
+                }
+            } catch (Exception e) {
+                log.info("Failed to send message");
             }
         });
+        listenerContainerMap.put(username, container);
         container.start();
-        sessions.put(username, container);
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
-//        String username = (String) session.getAttributes().get("username");
-//        if (username != null) {
-//            sessions.remove(username, session);
-//            log.info("Disconnected By Private: {}", username);
-//        }
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws IOException {
         String username = session.getAttributes().get("username").toString();
-
-        SimpleMessageListenerContainer container = sessions.remove(username);
+        sessionMap.remove(username);
+        SimpleMessageListenerContainer container = listenerContainerMap.remove(username);
         if (container != null) {
             container.stop();
-            log.info("Continer stop");
+            container.shutdown();
         }
     }
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        ChatMessage payload = objectMapper.readValue(message.getPayload().toString(), ChatMessage.class);
-        validatePayload(session, payload);
+        try {
+            ChatMessage chatMessage = objectMapper.readValue(message.getPayload().toString(), ChatMessage.class);
+            if (!validatePayload(session, chatMessage)) {
+                return;
+            }
 
-//        WebSocketSession targetSession = sessions.get(payload.getTo());
-//        if (targetSession != null && targetSession.isOpen()) {
-//            if (payload.getTimestamp() == null) {
-//                payload.setTimestamp(System.currentTimeMillis());
-//            }
-//            targetSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(payload)));
-
-        rabbitTemplate.convertAndSend(RabbitMQConfig.topicExchangeName, payload.getTo(), payload);
-        return;
-//        }
-
-////        log.info("Target user is offline: {}", payload.getTo());
-//        sendError(session, "USER_OFFLINE", "Target user is offline");
+            if (chatMessage.getTimestamp() == null) {
+                chatMessage.setTimestamp(System.currentTimeMillis());
+            }
+            rabbitTemplate.convertAndSend(directExchange.getName(), chatMessage.getTo(), chatMessage);
+        } catch (Exception e) {
+            log.error("Failed to send message: ", e);
+            sendError(session, "PARSE_ERROR", "Invalid message format");
+        }
     }
 
-    private void validatePayload(WebSocketSession session, ChatMessage payload) {
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) {
+        String username = (String) session.getAttributes().get("username");
+        if (username != null) {
+            sessionMap.remove(username, session);
+        }
+        log.warn("Private websocket transport error: {}", exception.getMessage());
+    }
+
+    @Override
+    public boolean supportsPartialMessages() {
+        return false;
+    }
+
+    private boolean validatePayload(WebSocketSession session, ChatMessage payload) {
         if (payload == null) {
-            throw new IllegalArgumentException("Message payload is required");
+            sendError(session, "MISSING_PAYLOAD", "Message payload is required");
+            return false;
         }
         if (isBlank(payload.getTo()) || isBlank(payload.getFrom()) || payload.getType() == null) {
-            throw new IllegalArgumentException("Fields 'to', 'from', and 'type' are required");
+            sendError(session, "MISSING_FIELDS", "Fields 'to', 'from', and 'type' are required");
+            return false;
         }
 
         String authenticatedUser = (String) session.getAttributes().get("username");
         if (authenticatedUser == null || !authenticatedUser.equals(payload.getFrom())) {
-            throw new IllegalArgumentException(String.format("Sender identity mismatch: Authenticated as '%s' but payload says '%s'", authenticatedUser, payload.getFrom()));
+            log.warn("Sender identity mismatch: Authenticated as '{}' but payload says '{}'", authenticatedUser, payload.getFrom());
+            sendError(session, "IDENTITY_MISMATCH", String.format("Sender identity mismatch: Authenticated as '%s' but payload says '%s'", authenticatedUser, payload.getFrom()));
+            return false;
         }
 
         if (payload.getType() == ChatMessage.MessageType.TEXT) {
             if (isBlank(payload.getContent())) {
-                throw new IllegalArgumentException("Field 'content' is required for TEXT");
+                sendError(session, "MISSING_CONTENT", "Field 'content' is required for TEXT");
+                return false;
             }
-            return;
+            return true;
         }
 
         if (isBlank(payload.getMediaUrl())) {
-            throw new IllegalArgumentException("Field 'mediaUrl' is required for IMAGE/VIDEO");
+            sendError(session, "MISSING_MEDIA", "Field 'mediaUrl' is required for IMAGE/VIDEO");
+            return false;
         }
+        return true;
     }
 
     private boolean isBlank(String value) {
@@ -144,20 +157,6 @@ public class PrivateHandler implements WebSocketHandler {
         } catch (Exception e) {
             // ignore secondary transport errors while reporting failures
         }
-    }
-
-    @Override
-    public void handleTransportError(WebSocketSession session, Throwable exception) {
-        String username = (String) session.getAttributes().get("username");
-        if (username != null) {
-            sessions.remove(username, session);
-        }
-        log.warn("Private websocket transport error: {}", exception.getMessage());
-    }
-
-    @Override
-    public boolean supportsPartialMessages() {
-        return false;
     }
 
 }

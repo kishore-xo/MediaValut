@@ -4,8 +4,8 @@ import com.kid.A0.dto.SubResponse
 
 interface SubscriptionServiceInterface {
 
-    fun createSub(userId: Long, planName: String): SubResponse
+    fun createSub(username: String, planName: String): SubResponse
 
-    fun getSub(userId: Long): SubResponse
+    fun getSub(username: String): SubResponse
 
 }
