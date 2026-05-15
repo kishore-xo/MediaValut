@@ -1,454 +1,141 @@
-# A0 — Video & Photo Streaming Platform
+# MediaVault (Code: A0) — Premium Media & Messaging Platform
 
-A Spring Boot application for uploading, processing, and streaming videos and photos with JWT authentication, GraphQL support, and real-time quality switching.
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-21-orange)](https://www.oracle.com/java/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)](https://www.postgresql.org/)
+[![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Latest-red)](https://www.rabbitmq.com/)
+[![Redis](https://img.shields.io/badge/Redis-7-dc382d)](https://redis.io/)
 
-## Overview
+A high-performance, enterprise-grade media platform for video/photo streaming, real-time messaging, and secure content management.
 
-A0 is a full-featured media platform that handles:
-- **Video uploads** with automatic ffmpeg conversion (multiple quality tiers: 144p–4320p)
-- **Photo uploads** with access control
-- **Real-time quality switching** during playback
-- **JWT authentication** with secure cookie handling
-- **GraphQL API** alongside REST endpoints
-- **Redis caching** for performance
-- **Rate limiting** and upload size controls
-- **Async processing** for long-running transcoding jobs
+## 🌟 Overview
 
-## Architecture
+MediaVault (A0) is a robust Single Page Application (SPA) built with Spring Boot 3.x, featuring:
+- **Enterprise Media Streaming**: Automatic FFmpeg transcoding with multi-tier quality switching (144p to 4K).
+- **Real-Time Communication**: Public and private chat systems powered by WebSockets and RabbitMQ.
+- **Zero-Trust Architecture**: Secure JWT-based authentication, API key management, and granular access control.
+- **Premium UI/UX**: Professional glassmorphism dashboard with dark-mode aesthetics and fluid transitions.
+- **Scalable Infrastructure**: Distributed caching with Redis and asynchronous message processing.
 
-```
-┌─────────────────────────────────────────┐
-│ Frontend (HTML/JS)                      │
-│ - Dashboard           (/dashboard.html) │
-│ - Video Tester        (/video-stream-test.html)
-│ - Photo Tester        (/photo-test.html)│
-└────────────┬──────────────────────────┘
-             │
-     ┌───────┴────────┐
-     │                │
-┌────▼────────┐  ┌──▼──────────┐
-│  JWT Token  │  │  API Key    │
-│  (Bearer)   │  │  (Header)   │
-└────┬────────┘  └──┬──────────┘
-     │               │
-     └───────┬───────┘
-             │
-    ┌────────▼────────────────────────┐
-    │ Spring Boot REST/GraphQL APIs   │
-    │ - /api/v1/auth/*   (login)      │
-    │ - /api/v1/video/*  (stream)     │
-    │ - /api/v1/photo/*  (upload)     │
-    │ - /api/v1/user/*   (profile)    │
-    │ - /api/v1/plan/*   (subscriptions)
-    │ - /graphql         (queries)    │
-    └────────────┬────────────────────┘
-                 │
-    ┌────────────┼───────────────────┐
-    │            │                   │
-┌───▼───┐  ┌────▼────┐  ┌──────┐  ┌─▼──────┐
-│ Redis │  │PostgreSQL│  │FFmpeg│  │Disk IO │
-│ Cache │  │  Database│  │  Video  │ Photos  │
-└───────┘  └──────────┘  └──────┘  │ Files  │
-                                   └────────┘
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    User((User/Client)) --> SPA[Premium SPA Dashboard]
+    SPA --> Auth{Security Filter}
+    
+    subgraph "Backend Services (Spring Boot)"
+        Auth --> REST[REST Controllers]
+        Auth --> GQL[GraphQL Resolvers]
+        Auth --> WS[WebSocket Handlers]
+        
+        WS --> RMQ[RabbitMQ Exchange]
+        RMQ --> PubSub[Public/Private Queues]
+    end
+    
+    subgraph "Storage & Processing"
+        REST --> DB[(PostgreSQL)]
+        REST --> Cache[(Redis)]
+        REST --> FFmpeg[FFmpeg Transcoder]
+        FFmpeg --> Disk[Media Storage]
+    end
+    
+    PubSub --> WS
 ```
 
-## Tech Stack
+## 🚀 Tech Stack
 
-| Component | Technology | Version |
-|-----------|-----------|---------|
-| **Language** | Java | 21 |
-| **Framework** | Spring Boot | 4.0.5 |
-| **Security** | JWT (jjwt) | 0.13.0 |
-| **Database** | PostgreSQL | 15 |
-| **Caching** | Redis | 7 |
-| **Media Processing** | FFmpeg | Latest |
-| **Build** | Maven | 3.9.6 |
-| **GraphQL** | Spring GraphQL | Spring Boot integrated |
-| **Container** | Docker | Latest |
+| Component | Technology | Version | Description |
+|-----------|-----------|---------|-------------|
+| **Backend** | Spring Boot | 3.2.5 | Core Framework |
+| **Messaging** | RabbitMQ | 3.x | Real-time Message Queuing |
+| **Real-time** | WebSockets | STOMP/SockJS | Bi-directional Communication |
+| **Database** | PostgreSQL | 15 | Persistent Storage |
+| **Caching** | Redis | 7 | Session & Metadata Caching |
+| **Security** | JWT / Spring Security | 0.12.x | Stateless Authentication |
+| **Media** | FFmpeg / FFprobe | Latest | Video/Photo Processing |
+| **Frontend** | Vanilla JS / CSS | Modern | Glassmorphism SPA |
 
-## Prerequisites
+## 🛠️ Key Features
 
-### Local Development
-- **Java 21+** ([Eclipse Temurin](https://adoptium.net/))
-- **Maven 3.9+**
-- **PostgreSQL 15+**
-- **Redis 7+**
-- **FFmpeg** (for video transcoding)
-  - Windows: [ffmpeg.zeranoe.com](http://ffmpeg.zeranoe.com/) or `choco install ffmpeg`
-  - macOS: `brew install ffmpeg`
-  - Linux: `apt install ffmpeg`
+### 1. Advanced Video Pipeline
+- **Smart Transcoding**: Automatic conversion of uploaded videos into multiple quality variants (360p, 720p, 1080p, etc.).
+- **Seamless Switching**: Manual or automatic quality switching during playback without losing position.
+- **Secure Streaming**: Tokenized access to media files with rate-limiting and expiration.
 
-### Docker
-- **Docker Desktop** or Docker + Docker Compose
+### 2. Real-Time Chat System
+- **Global Broadcast**: Public chat room for platform-wide communication.
+- **Private Messaging**: Secure one-on-one chats with RabbitMQ-backed message delivery.
+- **Media Sharing**: Attach photos and videos from your library or local storage directly in chats.
+- **Presence Tracking**: Real-time connection status (Online/Offline).
 
-## Getting Started
+### 3. Professional SPA Dashboard
+- **Unified Interface**: Manage profile, media, API keys, and subscriptions in one place.
+- **Subscription Engine**: Tiered plans (Basic, Pro, Admin) with varying upload limits and features.
+- **Developer Tools**: Integrated GraphQL explorer and API key management for third-party integrations.
 
-### Option 1: Local Development
+### 4. Enterprise Security
+- **JWT & Cookies**: Dual authentication support (Bearer Token & Secure HttpOnly Cookies).
+- **Zero-Trust Audit**: Hardened against resource leaks and common vulnerabilities.
+- **Rate Limiting**: Per-user and per-subscription request throttling using Redis.
 
-#### 1. Clone and setup
+## 🏁 Getting Started
 
-```bash
-git clone https://github.com/yourusername/A0.git
-cd A0
-cp .env.example .env
+### Prerequisites
+- **Java 21+**
+- **Docker & Docker Compose**
+- **FFmpeg** (Required for local development without Docker)
+
+### Quick Start with Docker (Recommended)
+1. **Clone the repo:**
+   ```bash
+   git clone https://github.com/yourusername/MediaVault.git
+   cd MediaVault
+   ```
+2. **Setup environment:**
+   ```bash
+   cp .env.example .env
+   # Update variables in .env if needed
+   ```
+3. **Launch everything:**
+   ```bash
+   docker-compose up -d
+   ```
+4. **Access the platform:**
+   - **Main App**: [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html)
+   - **RabbitMQ Management**: [http://localhost:15672](http://localhost:15672) (admin/admin123)
+   - **GraphiQL**: [http://localhost:8080/graphiql](http://localhost:8080/graphiql)
+
+## 📂 Project Structure
+
+```text
+MediaVault/
+├── src/main/java/.../A0/
+│   ├── websocket/          # Public/Private chat handlers
+│   ├── config/             # RabbitMQ, Security, WebSocket config
+│   ├── controller/         # REST API endpoints
+│   ├── graphController/    # GraphQL resolvers
+│   ├── service/            # Business logic (Video, Photo, User)
+│   └── aspect/             # Rate limiting & Upload validation
+├── src/main/resources/
+│   ├── static/             # Premium SPA (HTML/JS/CSS)
+│   ├── graphql/            # GraphQL Schema definitions
+│   └── application.yaml    # Core configurations
+├── docker-compose.yaml      # Full stack orchestration
+└── README.md               # You are here
 ```
 
-#### 2. Configure `.env`
+## 🔒 Security & Performance
+- **Connection Pools**: Optimized database and RabbitMQ connection management.
+- **Async Processing**: All heavy lifting (FFmpeg, Emails) is handled via background workers.
+- **Caching Strategy**: Multi-level caching (L1 App, L2 Redis) for high-traffic endpoints.
 
-Edit `.env` with your local paths:
-
-```env
-SPRING_DATASOURCE_PASSWORD=your_postgres_password
-FFMPEG_PATH=/path/to/ffmpeg
-FFPROBE_PATH=/path/to/ffprobe
-JWT_SECRET_KEY=your_dev_secret_key
-```
-
-#### 3. Start PostgreSQL & Redis
-
-```bash
-# Using Docker
-docker run -d --name postgres -e POSTGRES_PASSWORD=root1234 -p 5432:5432 postgres:15
-docker run -d --name redis -p 6379:6379 redis:7
-
-# Or use your local installation
-```
-
-#### 4. Run the app
-
-```bash
-./mvnw spring-boot:run
-```
-
-Access the app:
-- **Dashboard**: http://localhost:8080/dashboard.html
-- **GraphQL IDE**: http://localhost:8080/graphiql
-- **Video Tester**: http://localhost:8080/video-stream-test.html
-- **Photo Tester**: http://localhost:8080/photo-test.html
+## 🤝 Contributing
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
 
 ---
-
-### Option 2: Docker Compose (Recommended for teams)
-
-```bash
-# Copy and configure
-cp .env.example .env
-# Edit .env with your values
-
-# Start all services
-docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-
-# Stop
-docker-compose down
-```
-
-Full guide: [DOCKER_SETUP.md](./DOCKER_SETUP.md)
-
-## API Overview
-
-### Authentication
-
-#### Login
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
-  -d "username=testuser&password=testpass"
-```
-
-Response:
-```json
-{
-  "userId": 1,
-  "username": "testuser",
-  "role": "CUSTOMER",
-  "token": "eyJhbGciOiJIUzI1NiJ9...",
-  "tokenType": "Bearer"
-}
-```
-
-#### Use token in requests
-```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:8080/api/v1/video
-```
-
----
-
-### Video API
-
-#### Upload
-```bash
-curl -X POST \
-  -H "Authorization: Bearer TOKEN" \
-  -F "video=@myvideo.mp4" \
-  http://localhost:8080/api/v1/video
-```
-
-#### List user's videos
-```bash
-curl -H "Authorization: Bearer TOKEN" \
-  http://localhost:8080/api/v1/video
-```
-
-#### Stream video (with quality)
-```bash
-# Default (source quality)
-http://localhost:8080/api/v1/video/{videoId}?apikey=key
-
-# Specific quality
-http://localhost:8080/api/v1/video/{videoId}?quality=720p&apikey=key
-```
-
-#### Get available qualities
-```bash
-curl -H "Authorization: Bearer TOKEN" \
-  http://localhost:8080/api/v1/video/{videoId}/qualities
-```
-
----
-
-### GraphQL API
-
-#### Query user profile
-
-```graphql
-query GetMe {
-  getMe {
-    id
-    username
-    email
-    role
-    subscription {
-      id
-      status
-      plan {
-        name
-        monthlyPrice
-      }
-    }
-  }
-}
-```
-
-#### Query specific user (admin/owner only)
-
-```graphql
-query GetUser($id: ID!) {
-  getUser(id: $id) {
-    id
-    username
-    email
-    subResponse {
-      status
-      planName
-    }
-    apiKeyResponse {
-      id
-      prefix
-      name
-      revoked
-    }
-  }
-}
-```
-
----
-
-### Photo API
-
-#### Upload
-```bash
-curl -X POST \
-  -H "Authorization: Bearer TOKEN" \
-  -F "photo=@myphoto.jpg" \
-  http://localhost:8080/api/v1/photo
-```
-
-#### Stream
-```bash
-http://localhost:8080/api/v1/photo/{photoId}?apikey=key
-```
-
----
-
-## Project Structure
-
-```
-A0/
-├── src/main/
-│   ├── java/com/kid/A0/
-│   │   ├── A0Application.java           # Entry point
-│   │   ├── annotation/                  # Custom annotations (@RateLimit, @CheckUploadLimit)
-│   │   ├── aspect/                      # AOP aspects (rate limiting, upload limiting)
-│   │   ├── config/                      # Security, cache, thread pools
-│   │   ├── controller/                  # REST endpoints
-│   │   ├── dto/                         # Data transfer objects
-│   │   ├── exception/                   # Global exception handlers
-│   │   ├── graphController/             # GraphQL resolvers
-│   │   ├── model/                       # JPA entities
-│   │   ├── repo/                        # Repository (DAO) layer
-│   │   ├── schedule/                    # Scheduled tasks (cleanup)
-│   │   ├── security/                    # JWT filter, utilities
-│   │   └── service/                     # Business logic
-│   └── resources/
-│       ├── application.yaml             # Spring Boot config (reads from .env)
-│       ├── graphql/schema.graphqls      # GraphQL schema
-│       ├── static/                      # Frontend pages
-│       │   ├── dashboard.html
-│       │   ├── video-stream-test.html
-│       │   └── photo-test.html
-│       ├── video/                       # Uploaded video storage
-│       └── photo/                       # Uploaded photo storage
-│
-├── Dockerfile                          # Container image
-├── docker-compose.yaml                 # Multi-service compose
-├── DOCKER_SETUP.md                     # Docker guide
-├── .env.example                        # Environment template
-├── .gitignore                          # Git exclusions
-├── pom.xml                             # Maven dependencies
-└── README.md                           # This file
-```
-
----
-
-## Key Features
-
-### 1. Video Processing Pipeline
-
-- **Upload**: User uploads `.mp4` file
-- **Validation**: Size and type checks
-- **Processing**: Async ffmpeg job converts to standardized format (`libx264`, `aac`)
-- **Quality Splits**: Generate 480p, 720p, 1080p, 1440p, 2160p versions from original
-- **Metadata**: Store in PostgreSQL, cache with Redis
-- **Streaming**: Direct browser playback or blob-mode fallback
-
-### 2. Authentication & Authorization
-
-- **JWT**: Stateless token-based auth
-- **Cookie**: Secure session cookie (`a0_token`) set on login
-- **API Key**: Optional query param or header for public/partner access
-- **Ownership**: All video/photo access verified against user ID
-- **Roles**: ADMIN and CUSTOMER roles with method-level security
-
-### 3. Real-Time Quality Switching
-
-- **Frontend**: HTML5 `<video>` player with manual quality buttons
-- **Direct Mode**: Fast streaming via browser cookie (if cookie auth works)
-- **Blob Mode**: Safe fallback using JWT Bearer token + blob URLs
-- **Smart Fallback**: Auto-detect if direct mode works, switch to blob if not
-- **Seamless**: Resume playback position on quality change
-
-### 4. Performance & Caching
-
-- **Redis Cache**: User profiles, subscription data, API keys (60s TTL)
-- **Async Processing**: Video conversions run in background thread pool (max 4 workers)
-- **Rate Limiting**: Custom `@RateLimit` aspect (default: 60 requests/min)
-- **Upload Limits**: Custom `@CheckUploadLimit` aspect (per subscription tier)
-
-### 5. GraphQL Support
-
-- **Queries**: `getMe`, `getUser(id)`, plan/subscription details
-- **Mutations**: Update profile, subscriptions (extensible)
-- **Type Safety**: Full schema introspection and documentation
-- **GraphiQL IDE**: http://localhost:8080/graphiql
-
----
-
-## Security Notes
-
-### Current Security Features
-
-- ✅ JWT Bearer token validation
-- ✅ Secure cookie (HttpOnly, SameSite=Lax)
-- ✅ CSRF disabled (stateless API)
-- ✅ Method-level authorization checks
-- ✅ Rate limiting
-- ✅ Upload size limits
-- ✅ Request validation beans
-
----
-
-## Testing
-
-### Unit & Integration Tests
-```bash
-./mvnw test
-```
-
-### Compile without tests
-```bash
-./mvnw clean compile -DskipTests
-```
-
-### Build JAR
-```bash
-./mvnw clean package -DskipTests
-```
-
----
-
-## Database Schema Overview
-
-**Key Tables:**
-- `users` — user accounts, roles, credentials
-- `media` — video/photo entries (id, title, file_path, user_id, stage, type)
-- `media_version` — quality variants of videos (media_id, quality, file_path)
-- `subscriptions` — user subscriptions, plan assignments
-- `plans` — pricing tiers, rate limits, media counts
-- `api_keys` — API key management
-
----
-
-## Deployment
-
-### Docker
-See [DOCKER_SETUP.md](./DOCKER_SETUP.md) for full guide.
-
-Quick start:
-```bash
-docker-compose up -d
-```
-
-### Manual Deployment
-```bash
-# Build
-./mvnw clean package
-
-# Run
-java -jar target/A0-0.0.1-SNAPSHOT.jar
-```
-
----
-
-## Contributing
-
-1. **Branch**: Create feature branch (`feature/description`)
-2. **Commit**: Use clear commit messages
-3. **Push**: Push to your fork
-4. **PR**: Submit pull request with description
-5. **Tests**: Ensure tests pass (`mvn test`)
-6. **Code Style**: Follow Spring Boot conventions
-
-### Code Standards
-- Java 21 syntax and features
-- Maven dependencies managed in `pom.xml`
-- Lombok for boilerplate
-- Spring Security for auth
-- JPA for ORM
-
----
-
-## License
-
-[Specify your license here, e.g., MIT, Apache 2.0, etc.]
-
----
-
-## Support
-
-- **Issues**: GitHub Issues
-- **Discussions**: GitHub Discussions
-
----
+*Maintained by Kishore (Code: A0)*
