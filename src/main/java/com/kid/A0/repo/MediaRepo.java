@@ -1,6 +1,8 @@
 package com.kid.A0.repo;
 
 import com.kid.A0.model.Media;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -11,7 +13,7 @@ public interface MediaRepo extends JpaRepository<Media, String> {
 
     Optional<Media> findByIdAndTypeAndIsDeleted(String id, String type, boolean isDeleted);
 
-    List<Media> findMediaByUserIdAndTypeAndIsDeleted(Long userId, String type, boolean isDeleted);
+    Page<Media> findMediaByUserIdAndTypeAndIsDeleted(Long userId, String type, boolean isDeleted, Pageable pageable);
 
     int countByUserIdAndTypeAndIsDeletedFalse(Long userId, String type);
 

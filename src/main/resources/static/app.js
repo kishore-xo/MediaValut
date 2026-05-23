@@ -31,6 +31,39 @@ function toast(msg, type = 'info') {
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
 }
 
+function renderPagination(container, pageData, fetchFunction) {
+    if (!pageData || pageData.totalPages <= 1) return;
+    const p = document.createElement('div');
+    p.className = 'pagination-controls';
+    p.style.display = 'flex';
+    p.style.gap = '10px';
+    p.style.marginTop = '15px';
+    p.style.justifyContent = 'center';
+    p.style.width = '100%';
+    p.style.gridColumn = '1 / -1';
+    
+    const prev = document.createElement('button');
+    prev.textContent = 'Previous';
+    prev.disabled = pageData.number === 0;
+    prev.className = 'btn-ghost';
+    prev.onclick = () => fetchFunction(pageData.number - 1);
+    
+    const info = document.createElement('span');
+    info.textContent = `Page ${pageData.number + 1} of ${pageData.totalPages}`;
+    info.style.lineHeight = '32px';
+    
+    const next = document.createElement('button');
+    next.textContent = 'Next';
+    next.disabled = pageData.number >= pageData.totalPages - 1;
+    next.className = 'btn-ghost';
+    next.onclick = () => fetchFunction(pageData.number + 1);
+    
+    p.appendChild(prev);
+    p.appendChild(info);
+    p.appendChild(next);
+    container.appendChild(p);
+}
+
 function getToken() {
     const t = ($('jwtToken')?.value || '').trim() || ls(SK.jwt) || '';
     if (t) { ls(SK.jwt, t); if ($('jwtToken')) $('jwtToken').value = t; }
@@ -263,12 +296,15 @@ function renderPlans(plans) {
 }
 
 // ─── API Keys ───
-async function fetchApiKeys() {
+async function fetchApiKeys(page = 0) {
     try {
-        const r = await fetch('/api/v1/apikey', { headers: authHeaders() });
+        const url = '/api/v1/apikey' + (page ? `?page=${page}` : '');
+        const r = await fetch(url, { headers: authHeaders() });
         if (!r.ok) throw new Error(`${r.status}`);
-        const keys = await r.json();
+        const data = await r.json();
+        const keys = data.content || data;
         renderApiKeys(keys);
+        renderPagination($('apiKeyList'), data, fetchApiKeys);
     } catch (_) {}
 }
 
@@ -318,12 +354,15 @@ function vlog(msg) {
     l.prepend(d);
 }
 
-async function fetchMyVideos() {
+async function fetchMyVideos(page = 0) {
     try {
-        const r = await fetch(withApiKey('/api/v1/video'), { headers: authHeaders(true) });
+        const url = '/api/v1/video' + (page ? `?page=${page}` : '');
+        const r = await fetch(withApiKey(url), { headers: authHeaders(true) });
         if (!r.ok) throw new Error(`${r.status}`);
-        const vids = await r.json();
+        const data = await r.json();
+        const vids = data.content || data;
         renderVideoList(vids);
+        renderPagination($('videoList'), data, fetchMyVideos);
     } catch (e) { vlog('Failed to load videos: ' + e.message); }
 }
 
@@ -469,11 +508,15 @@ function plog(msg) {
     l.prepend(d);
 }
 
-async function fetchMyPhotos() {
+async function fetchMyPhotos(page = 0) {
     try {
-        const r = await fetch(withApiKey('/api/v1/photo'), { headers: authHeaders(true) });
+        const url = '/api/v1/photo' + (page ? `?page=${page}` : '');
+        const r = await fetch(withApiKey(url), { headers: authHeaders(true) });
         if (!r.ok) throw new Error(`${r.status}`);
-        renderPhotoList(await r.json());
+        const data = await r.json();
+        const photos = data.content || data;
+        renderPhotoList(photos);
+        renderPagination($('photoList'), data, fetchMyPhotos);
     } catch (e) { plog('Failed: ' + e.message); }
 }
 
@@ -786,17 +829,20 @@ async function switchPickerTab(tab) {
     fetchPickerMedia();
 }
 
-async function fetchPickerMedia() {
+async function fetchPickerMedia(page = 0) {
     const grid = $('pickerGrid');
     if (!grid) return;
     grid.innerHTML = '<div class="empty-state">Loading library...</div>';
     
     try {
-        const endpoint = pickerTab === 'photos' ? '/api/v1/photo' : '/api/v1/video';
+        const baseEndpoint = pickerTab === 'photos' ? '/api/v1/photo' : '/api/v1/video';
+        const endpoint = baseEndpoint + (page ? `?page=${page}` : '');
         const r = await fetch(withApiKey(endpoint), { headers: authHeaders(true) });
         if (!r.ok) throw new Error(`${r.status}`);
-        const items = await r.json();
+        const data = await r.json();
+        const items = data.content || data;
         renderPickerItems(items);
+        renderPagination(grid, data, fetchPickerMedia);
     } catch (e) {
         grid.innerHTML = `<div class="empty-state">Failed to load ${pickerTab}</div>`;
     }

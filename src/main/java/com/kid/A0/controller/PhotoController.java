@@ -5,6 +5,9 @@ import com.kid.A0.annotation.RateLimit;
 import com.kid.A0.dto.MediaResponse;
 import com.kid.A0.service.PhotoService;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -47,7 +50,8 @@ public class PhotoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MediaResponse>> getPhotos(Principal principal) {
-        return ResponseEntity.ok(photoService.getPhotos(principal.getName()));
+    public ResponseEntity<Page<MediaResponse>> getPhotos(Principal principal,
+                                                         @PageableDefault(size = 5)Pageable pageable) {
+        return ResponseEntity.ok(photoService.getPhotos(principal.getName(),pageable));
     }
 }

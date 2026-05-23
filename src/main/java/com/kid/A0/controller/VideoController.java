@@ -5,6 +5,9 @@ import com.kid.A0.annotation.RateLimit;
 import com.kid.A0.dto.MediaResponse;
 import com.kid.A0.service.VideoService;
 import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -60,8 +63,9 @@ public class VideoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MediaResponse>> getVideos(Principal principal) {
-        return ResponseEntity.ok(videoService.getVideos(principal.getName()));
+    public ResponseEntity<Page<MediaResponse>> getVideos(Principal principal,
+                                                         @PageableDefault(size = 5) Pageable pageable) {
+        return ResponseEntity.ok(videoService.getVideos(principal.getName(), pageable));
     }
 
 }

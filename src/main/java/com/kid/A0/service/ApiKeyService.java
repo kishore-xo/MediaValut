@@ -7,6 +7,8 @@ import com.kid.A0.repo.ApiKeyRepo;
 import com.kid.A0.repo.UserRepo;
 import com.kid.A0.service.Interface.ApiKeyServiceInterface;
 import org.springframework.cache.annotation.CachePut;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,7 +18,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -60,11 +61,11 @@ public class ApiKeyService implements ApiKeyServiceInterface {
     }
 
     @Transactional
-    public List<ApiKeyResponse> getApiKeys(String username) {
+    public Page<ApiKeyResponse> getApiKeys(String username, Pageable pageable) {
         User user = currentUser(username);
-        List<ApiKey> apiKeys = apiKeyRepo.findByUserIdAndRevokedFalse(user.getId());
+        Page<ApiKey> apiKeys = apiKeyRepo.findByUserIdAndRevokedFalse(user.getId(),pageable);
 
-        return apiKeys.stream().map(ApiKeyResponse::new).toList();
+        return apiKeys.map(ApiKeyResponse::new);
     }
 
     public void revokeKey(String username, Long keyId) {

@@ -2,10 +2,12 @@ package com.kid.A0.service.Interface
 
 import com.kid.A0.dto.UserRequest
 import com.kid.A0.dto.UserResponse
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 
 interface UserServiceInterface {
 
-    val users: List<UserResponse>
+    fun getUsers(pageable: Pageable): Page<UserResponse>
 
     fun getUser(id: Long): UserResponse
 

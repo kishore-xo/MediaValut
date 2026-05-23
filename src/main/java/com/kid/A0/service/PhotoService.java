@@ -11,6 +11,8 @@ import com.kid.A0.service.Interface.PhotoServiceInterface;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.MediaTypeFactory;
@@ -27,7 +29,6 @@ import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
@@ -138,13 +139,11 @@ public class PhotoService implements PhotoServiceInterface {
         }
     }
 
-    public List<MediaResponse> getPhotos(String username) {
+    public Page<MediaResponse> getPhotos(String username, Pageable pageable) {
         User user = currentUser(username);
-        List<MediaResponse> responses = mediaRepo
-                .findMediaByUserIdAndTypeAndIsDeleted(user.getId(), "photo", false)
-                .stream()
-                .map(MediaResponse::new)
-                .toList();
+        Page<MediaResponse> responses = mediaRepo
+                .findMediaByUserIdAndTypeAndIsDeleted(user.getId(), "photo", false,pageable)
+                .map(MediaResponse::new);
         return responses;
     }
 

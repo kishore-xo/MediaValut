@@ -11,6 +11,8 @@ import org.modelmapper.ModelMapper;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,8 +36,8 @@ public class UserService implements UserServiceInterface {
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
     }
 
-    public List<UserResponse> getUsers() {
-        return userRepo.findAll().stream().map(UserResponse::new).toList();
+    public Page<UserResponse> getUsers(Pageable pageable) {
+        return userRepo.findAll(pageable).map(UserResponse::new);
     }
 
     @Cacheable(cacheNames = USER_CACHE, key = "#id")
@@ -55,7 +57,7 @@ public class UserService implements UserServiceInterface {
     }
 
     @Transactional
-    @CacheEvict(cacheNames = USER_CACHE,key = "#id")
+    @CacheEvict(cacheNames = USER_CACHE, key = "#id")
     public String deleteUser(long id) {
         User user = userRepo.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
         userRepo.delete(user);
@@ -63,7 +65,7 @@ public class UserService implements UserServiceInterface {
     }
 
     @Transactional
-    @CachePut(cacheNames = USER_CACHE,key = "#targetId")
+    @CachePut(cacheNames = USER_CACHE, key = "#targetId")
     public UserResponse updateUser(String username, long targetId, UserRequest userRequest) {
 
         User requested = userRepo.findUserByUsername(username)
@@ -73,7 +75,7 @@ public class UserService implements UserServiceInterface {
         boolean isOwner = requested.getId().equals(targetId);
 
         User targetUser = isOwner ? requested : userRepo.findById(targetId)
-                                                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (!isAdmin && !isOwner) {
             throw new RuntimeException("Forbidden: you can not edit this user");
@@ -106,7 +108,7 @@ public class UserService implements UserServiceInterface {
         return new UserResponse(targetUser);
     }
 
-    @Cacheable(cacheNames = USER_CACHE,key = "#username")
+    @Cacheable(cacheNames = USER_CACHE, key = "#username")
     public UserResponse getMe(String username) {
         User user = userRepo.findUserByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User Not Found"));
         return new UserResponse(user);

@@ -3,13 +3,14 @@ package com.kid.A0.graphController;
 import com.kid.A0.dto.*;
 import com.kid.A0.model.Role;
 import com.kid.A0.service.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -70,18 +71,18 @@ public class TestQue {
     }
 
     @SchemaMapping(typeName = "UserResponseGp", field = "apiKeyResponse")
-    public CompletableFuture<List<ApiKeyResponse>> apiKeyResponse(UserResponse user) {
-        return CompletableFuture.supplyAsync(() -> apiKeyService.getApiKeys(user.username()), executor);
+    public CompletableFuture<Page<ApiKeyResponse>> apiKeyResponse(UserResponse user) {
+        return CompletableFuture.supplyAsync(() -> apiKeyService.getApiKeys(user.username(), Pageable.ofSize(3)), executor);
     }
 
     @SchemaMapping(typeName = "UserResponseGp", field = "videoResponse")
-    public CompletableFuture<List<MediaResponse>> videoResponse(UserResponse user, Principal principal) {
-        return CompletableFuture.supplyAsync(() -> videoService.getVideos(user.username()), executor);
+    public CompletableFuture<Page<MediaResponse>> videoResponse(UserResponse user, Principal principal) {
+        return CompletableFuture.supplyAsync(() -> videoService.getVideos(user.username(), Pageable.ofSize(5)), executor);
     }
 
     @SchemaMapping(typeName = "UserResponseGp", field = "photoResponse")
-    public CompletableFuture<List<MediaResponse>> photoResponse(UserResponse user, Principal principal) {
-        return CompletableFuture.supplyAsync(() -> photoService.getPhotos(user.username()), executor);
+    public CompletableFuture<Page<MediaResponse>> photoResponse(UserResponse user, Principal principal) {
+        return CompletableFuture.supplyAsync(() -> photoService.getPhotos(user.username(), Pageable.ofSize(3)), executor);
     }
 
     private void validUser(Long id, Principal principal) {

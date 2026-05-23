@@ -2,6 +2,8 @@ package com.kid.A0.service.Interface;
 
 import com.kid.A0.dto.MediaResponse;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,7 +17,7 @@ public interface PhotoServiceInterface {
 
     ResponseEntity<Resource> getPhoto(String username, String photoId);
 
-    List<MediaResponse> getPhotos(String username);
+    Page<MediaResponse> getPhotos(String username, Pageable pageable);
 
     void deleteAll();
 }

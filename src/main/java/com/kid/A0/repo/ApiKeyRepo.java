@@ -1,6 +1,8 @@
 package com.kid.A0.repo;
 
 import com.kid.A0.model.ApiKey;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -10,7 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface ApiKeyRepo extends JpaRepository<ApiKey, Long> {
-    List<ApiKey> findByUserIdAndRevokedFalse(Long userId);
+    Page<ApiKey> findByUserIdAndRevokedFalse(Long userId, Pageable pageable);
 
     Optional<ApiKey> findByUserIdAndId(Long userId, Long keyId);
 

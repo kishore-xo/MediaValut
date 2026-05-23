@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.UrlResource;
 import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.*;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -176,14 +178,12 @@ public class VideoService implements VideoServiceInterface {
         return new MediaResponse(video);
     }
 
-    public List<MediaResponse> getVideos(String username) {
+    public Page<MediaResponse> getVideos(String username, Pageable pageable) {
         User user = currentUser(username);
 
         return mediaRepo
-                .findMediaByUserIdAndTypeAndIsDeleted(user.getId(), "video", false)
-                .stream()
-                .map(MediaResponse::new)
-                .toList();
+                .findMediaByUserIdAndTypeAndIsDeleted(user.getId(), "video", false,pageable)
+                .map(MediaResponse::new);
     }
 
     // this is done by scheduling

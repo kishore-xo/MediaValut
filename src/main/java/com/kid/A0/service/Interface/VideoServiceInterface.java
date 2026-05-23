@@ -2,6 +2,8 @@ package com.kid.A0.service.Interface;
 
 import com.kid.A0.dto.MediaResponse;
 import org.springframework.core.io.support.ResourceRegion;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,7 +23,7 @@ public interface VideoServiceInterface {
 
 	MediaResponse getVideoStatus(String username, String videoId) throws IOException;
 
-	List<MediaResponse> getVideos(String username);
+	Page<MediaResponse> getVideos(String username, Pageable pageable);
 
 	void deleteAll();
 }
