@@ -41,7 +41,7 @@ public class PrivateHandler implements WebSocketHandler {
         log.info("conneceted to private {}", username);
 
         sessionMap.put(username, session);
-        Queue queue = new Queue(username, true, false, true);
+        Queue queue = new Queue(username, true, false, false);
         amqpAdmin.declareQueue(queue);
 
         Binding binding = BindingBuilder

@@ -2,19 +2,14 @@ package com.kid.A0.websocket;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import tools.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 @Slf4j
@@ -37,7 +32,6 @@ public class PublicHandler implements WebSocketHandler {
 
 
     @Override
-
     public void afterConnectionEstablished(WebSocketSession session) {
         String username = session.getAttributes().get("username").toString();
         log.info("Connected to Global chat {}", username);
@@ -79,7 +73,7 @@ public class PublicHandler implements WebSocketHandler {
 
     @RabbitListener(bindings = @QueueBinding(
             value = @org.springframework.amqp.rabbit.annotation.Queue(
-                    autoDelete = "true",
+                    autoDelete = "false",
                     durable = "false"
             ),
             exchange = @org.springframework.amqp.rabbit.annotation.Exchange(

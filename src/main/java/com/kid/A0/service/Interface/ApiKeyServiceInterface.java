@@ -4,8 +4,6 @@ import com.kid.A0.dto.ApiKeyResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import java.util.List;
-
 public interface ApiKeyServiceInterface {
 
     ApiKeyResponse createKey(String username, String keyName);
