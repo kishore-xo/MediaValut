@@ -51,12 +51,22 @@ docker-compose down -v
 - **Dashboard**: http://localhost:8080/dashboard.html
 - **Video Tester**: http://localhost:8080/video-stream-test.html
 
+### Prometheus
+- **Port**: 9090 → http://localhost:9090
+- **Metrics**: Scrapes the app at `/actuator/prometheus`
+
+### Grafana
+- **Port**: 3000 → http://localhost:3000
+- **Default credentials**: `admin` / `admin` (override with `GRAFANA_ADMIN_USER` and `GRAFANA_ADMIN_PASSWORD`)
+
 ## Volumes
 
 - `./src/main/resources/video:/app/video` — uploaded video files
 - `./src/main/resources/photo:/app/photo` — uploaded photo files
 - `postgres_data` — PostgreSQL database files
 - `redis_data` — Redis data files
+- `prometheus_data` — Prometheus time-series data
+- `grafana_data` — Grafana configuration and dashboards
 
 ## Environment Variables
 
