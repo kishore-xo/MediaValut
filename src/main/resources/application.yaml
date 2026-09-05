@@ -38,8 +38,8 @@ spring:
     username: ${SPRING_RABBITMQ_USERNAME:guest}
     password: ${SPRING_RABBITMQ_PASSWORD:guest}
 
-#  profiles:
-#    active: kid
+  profiles:
+    active: kid
 
 management:
   endpoints:
