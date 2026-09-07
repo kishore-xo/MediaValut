@@ -1,21 +1,24 @@
 # MediaVault (Code: A0) — Premium Media & Messaging Platform
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0.5-brightgreen)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-orange)](https://www.oracle.com/java/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)](https://www.postgresql.org/)
 [![RabbitMQ](https://img.shields.io/badge/RabbitMQ-Latest-red)](https://www.rabbitmq.com/)
 [![Redis](https://img.shields.io/badge/Redis-7-dc382d)](https://redis.io/)
+[![Prometheus](https://img.shields.io/badge/Prometheus-3.5-orange)](https://prometheus.io/)
+[![Grafana](https://img.shields.io/badge/Grafana-12.1-f46800)](https://grafana.com/)
 
 A high-performance, enterprise-grade media platform for video/photo streaming, real-time messaging, and secure content management.
 
 ## 🌟 Overview
 
-MediaVault (A0) is a robust Single Page Application (SPA) built with Spring Boot 3.x, featuring:
+MediaVault (A0) is a robust Single Page Application (SPA) built with Spring Boot 4.x, featuring:
 - **Enterprise Media Streaming**: Automatic FFmpeg transcoding with multi-tier quality switching (144p to 4K).
 - **Real-Time Communication**: Public and private chat systems powered by WebSockets and RabbitMQ.
 - **Zero-Trust Architecture**: Secure JWT-based authentication, API key management, and granular access control.
 - **Premium UI/UX**: Professional glassmorphism dashboard with dark-mode aesthetics and fluid transitions.
 - **Scalable Infrastructure**: Distributed caching with Redis and asynchronous message processing.
+- **Operational Observability**: Spring Actuator metrics with Prometheus scraping and Grafana dashboards.
 
 ## 🏗️ Architecture
 
@@ -39,6 +42,10 @@ graph TD
         REST --> FFmpeg[FFmpeg Transcoder]
         FFmpeg --> Disk[Media Storage]
     end
+
+    AppMetrics[Actuator /actuator/prometheus] --> Prometheus[(Prometheus)]
+    Prometheus --> Grafana[(Grafana)]
+    REST --> AppMetrics
     
     PubSub --> WS
 ```
@@ -47,13 +54,15 @@ graph TD
 
 | Component | Technology | Version | Description |
 |-----------|-----------|---------|-------------|
-| **Backend** | Spring Boot | 3.2.5 | Core Framework |
+| **Backend** | Spring Boot | 4.0.5 | Core Framework |
 | **Messaging** | RabbitMQ | 3.x | Real-time Message Queuing |
 | **Real-time** | WebSockets | STOMP/SockJS | Bi-directional Communication |
 | **Database** | PostgreSQL | 15 | Persistent Storage |
 | **Caching** | Redis | 7 | Session & Metadata Caching |
 | **Security** | JWT / Spring Security | 0.12.x | Stateless Authentication |
+| **Monitoring** | Spring Actuator + Prometheus + Grafana | Latest | Metrics Collection & Visualization |
 | **Media** | FFmpeg / FFprobe | Latest | Video/Photo Processing |
+| **API Query** | GraphQL + GraphiQL | Spring GraphQL | Typed API Queries |
 | **Frontend** | Vanilla JS / CSS | Modern | Glassmorphism SPA |
 
 ## 🛠️ Key Features
@@ -105,6 +114,14 @@ graph TD
    - **Main App**: [http://localhost:8080/dashboard.html](http://localhost:8080/dashboard.html)
    - **RabbitMQ Management**: [http://localhost:15672](http://localhost:15672) (admin/admin123)
    - **GraphiQL**: [http://localhost:8080/graphiql](http://localhost:8080/graphiql)
+   - **Prometheus**: [http://localhost:9090](http://localhost:9090)
+   - **Grafana**: [http://localhost:3000](http://localhost:3000) (admin/admin by default)
+
+## 🆕 Recent Updates (Latest Commits)
+
+- Added **Prometheus + Grafana** services to Docker Compose with dedicated monitoring configuration.
+- Added standalone infra compose (`compose.yaml`) for **Redis, RabbitMQ, Prometheus, and Grafana**.
+- Extended docs and env setup for observability and service orchestration.
 
 ## 📂 Project Structure
 
@@ -121,7 +138,10 @@ MediaVault/
 │   ├── static/             # Premium SPA (HTML/JS/CSS)
 │   ├── graphql/            # GraphQL Schema definitions
 │   └── application.yaml    # Core configurations
+├── monitoring/prometheus.yml/ # Prometheus scrape configs
+├── DOCKER_SETUP.md          # Docker usage and troubleshooting
 ├── docker-compose.yaml      # Full stack orchestration
+├── compose.yaml             # Infra-only service stack
 └── README.md               # You are here
 ```
 
